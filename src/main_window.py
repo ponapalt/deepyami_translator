@@ -166,7 +166,6 @@ class MainWindow:
 
         # テキスト変更時のイベントバインディング（自動翻訳用）
         self.source_text.bind('<KeyRelease>', self._on_text_change)
-        self.source_text.bind('<<Paste>>', self._on_text_change)
 
         source_scrollbar = ttk.Scrollbar(source_frame, command=self.source_text.yview)
         source_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
