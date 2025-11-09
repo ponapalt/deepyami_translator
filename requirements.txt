@@ -1,20 +1,14 @@
-# LangChain Core - use latest stable versions
+# LangChain Core
 langchain>=1.0.0,<2.0.0
-langchain-core>=1.0.0,<2.0.0
 
-# LLM Providers - compatible with langchain 1.x
+# LLM Providers
+# Each provider automatically installs its required API client:
+# - langchain-openai -> openai
+# - langchain-anthropic -> anthropic
+# - langchain-google-genai -> google-generativeai
 langchain-openai>=1.0.0,<2.0.0
 langchain-anthropic>=1.0.0,<2.0.0
 langchain-google-genai>=3.0.0,<4.0.0
 
-# API Clients - latest stable versions
-# Note: openai and anthropic are needed for direct API access
-# google-generativeai is installed automatically by langchain-google-genai
-openai>=2.0.0,<3.0.0
-anthropic>=0.70.0,<1.0.0
-
 # Utilities
 python-dotenv>=1.0.0,<2.0.0
-
-# Core dependencies - ensure pre-built wheels for Python 3.12
-pyyaml>=6.0.3
