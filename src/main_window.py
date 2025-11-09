@@ -12,22 +12,52 @@ from src.llm_service import TranslationService
 
 
 class ToolTip:
-    """ツールチップを表示するクラス"""
+    """ツールチップを表示するクラス（他のWindowsアプリと同様、遅延表示）"""
 
-    def __init__(self, widget, text):
+    def __init__(self, widget, text, delay=500):
         self.widget = widget
         self.text = text
+        self.delay = delay  # ミリ秒単位の遅延時間
         self.tooltip_window = None
-        self.widget.bind('<Enter>', self.show_tooltip)
-        self.widget.bind('<Leave>', self.hide_tooltip)
+        self.timer_id = None
+        self.widget.bind('<Enter>', self.on_enter)
+        self.widget.bind('<Leave>', self.on_leave)
+        self.widget.bind('<Motion>', self.on_motion)
 
-    def show_tooltip(self, event=None):
+    def on_enter(self, event=None):
+        """マウスがウィジェットに入った時"""
+        self.schedule_tooltip(event)
+
+    def on_motion(self, event=None):
+        """マウスが動いた時（タイマーをリセット）"""
+        self.cancel_tooltip()
+        self.schedule_tooltip(event)
+
+    def on_leave(self, event=None):
+        """マウスがウィジェットから離れた時"""
+        self.cancel_tooltip()
+        self.hide_tooltip()
+
+    def schedule_tooltip(self, event):
+        """遅延後にツールチップを表示するようスケジュール"""
+        self.cancel_tooltip()
+        self.last_event = event
+        self.timer_id = self.widget.after(self.delay, self.show_tooltip)
+
+    def cancel_tooltip(self):
+        """スケジュールされたツールチップをキャンセル"""
+        if self.timer_id:
+            self.widget.after_cancel(self.timer_id)
+            self.timer_id = None
+
+    def show_tooltip(self):
         """ツールチップを表示"""
         if self.tooltip_window or not self.text:
             return
 
-        x = self.widget.winfo_rootx() + 20
-        y = self.widget.winfo_rooty() + self.widget.winfo_height() + 5
+        # マウスカーソルの位置にツールチップを表示
+        x = self.widget.winfo_pointerx() + 15
+        y = self.widget.winfo_pointery() + 10
 
         self.tooltip_window = tw = tk.Toplevel(self.widget)
         tw.wm_overrideredirect(True)
@@ -38,7 +68,7 @@ class ToolTip:
                         font=("Arial", 9))
         label.pack()
 
-    def hide_tooltip(self, event=None):
+    def hide_tooltip(self):
         """ツールチップを非表示"""
         if self.tooltip_window:
             self.tooltip_window.destroy()
@@ -243,13 +273,10 @@ class MainWindow:
         self.source_text.bind('<App>', self._show_source_context_menu)  # コンテキストメニューキー
         self.source_text.bind('<Control-F10>', self._show_source_context_menu)  # Ctrl+F10
 
-        # ツールチップを追加
-        ToolTip(self.source_text, "翻訳元テキスト")
-
-        # スクロールバー（自動表示/非表示）
-        self.source_scrollbar = ttk.Scrollbar(source_frame, command=self.source_text.yview)
-        self.source_scrollbar_visible = False
-        self.source_text.config(yscrollcommand=lambda *args: self._on_source_scroll(*args))
+        # スクロールバー（常に表示）
+        source_scrollbar = ttk.Scrollbar(source_frame, command=self.source_text.yview)
+        source_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.source_text.config(yscrollcommand=source_scrollbar.set)
 
         # 右側: 翻訳結果テキスト
         right_frame = ttk.Frame(self.paned_window)
@@ -295,13 +322,10 @@ class MainWindow:
         self.target_text.bind('<App>', self._show_target_context_menu)  # コンテキストメニューキー
         self.target_text.bind('<Control-F10>', self._show_target_context_menu)  # Ctrl+F10
 
-        # ツールチップを追加
-        ToolTip(self.target_text, "翻訳結果")
-
-        # スクロールバー（自動表示/非表示）
-        self.target_scrollbar = ttk.Scrollbar(target_frame, command=self.target_text.yview)
-        self.target_scrollbar_visible = False
-        self.target_text.config(yscrollcommand=lambda *args: self._on_target_scroll(*args))
+        # スクロールバー（常に表示）
+        target_scrollbar = ttk.Scrollbar(target_frame, command=self.target_text.yview)
+        target_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.target_text.config(yscrollcommand=target_scrollbar.set)
 
         # ステータスバー
         self.status_bar = ttk.Label(
@@ -679,6 +703,9 @@ class MainWindow:
 
     def _show_source_context_menu(self, event):
         """翻訳元テキストエリアのコンテキストメニューを表示"""
+        # コンテキストメニューを表示する前にテキストボックスをアクティブにする
+        self.source_text.focus_set()
+
         context_menu = tk.Menu(self.root, tearoff=0)
         context_menu.add_command(label="元に戻す", command=self._on_undo, accelerator="Ctrl+Z")
         context_menu.add_command(label="やり直し", command=self._on_redo, accelerator="Ctrl+Y")
@@ -696,6 +723,9 @@ class MainWindow:
 
     def _show_target_context_menu(self, event):
         """翻訳先テキストエリアのコンテキストメニューを表示"""
+        # コンテキストメニューを表示する前にテキストボックスをアクティブにする
+        self.target_text.focus_set()
+
         context_menu = tk.Menu(self.root, tearoff=0)
         context_menu.add_command(label="すべて選択", command=self._on_select_all_target, accelerator="Ctrl+A")
         context_menu.add_command(label="コピー", command=self._on_copy_target, accelerator="Ctrl+C")
@@ -720,39 +750,6 @@ class MainWindow:
             self.target_text.event_generate("<<Copy>>")
         except tk.TclError:
             pass
-
-    def _on_source_scroll(self, first, last):
-        """翻訳元テキストのスクロール時の処理（スクロールバーの自動表示/非表示）"""
-        self.source_scrollbar.set(first, last)
-
-        # スクロールバーが必要かどうかを判定
-        # first == '0.0' and last == '1.0' の場合、全体が表示されているのでスクロールバー不要
-        need_scrollbar = not (float(first) == 0.0 and float(last) == 1.0)
-
-        if need_scrollbar and not self.source_scrollbar_visible:
-            # スクロールバーを表示
-            self.source_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-            self.source_scrollbar_visible = True
-        elif not need_scrollbar and self.source_scrollbar_visible:
-            # スクロールバーを非表示
-            self.source_scrollbar.pack_forget()
-            self.source_scrollbar_visible = False
-
-    def _on_target_scroll(self, first, last):
-        """翻訳先テキストのスクロール時の処理（スクロールバーの自動表示/非表示）"""
-        self.target_scrollbar.set(first, last)
-
-        # スクロールバーが必要かどうかを判定
-        need_scrollbar = not (float(first) == 0.0 and float(last) == 1.0)
-
-        if need_scrollbar and not self.target_scrollbar_visible:
-            # スクロールバーを表示
-            self.target_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-            self.target_scrollbar_visible = True
-        elif not need_scrollbar and self.target_scrollbar_visible:
-            # スクロールバーを非表示
-            self.target_scrollbar.pack_forget()
-            self.target_scrollbar_visible = False
 
     def _on_swap_languages(self):
         """翻訳元と翻訳先のテキストを入れ替え、言語を自動推定"""
