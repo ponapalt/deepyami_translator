@@ -24,7 +24,7 @@ class SettingsDialog:
         # ダイアログウィンドウの作成
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("API設定")
-        self.dialog.geometry("500x400")
+        self.dialog.geometry("500x500")
         self.dialog.resizable(False, False)
         self.dialog.transient(parent)
         self.dialog.grab_set()
@@ -37,6 +37,9 @@ class SettingsDialog:
 
         # 現在の設定を読み込み
         self._load_current_settings()
+
+        # ダイアログをアクティブにする
+        self.dialog.focus_set()
 
     def _center_window(self):
         """ウィンドウを画面中央に配置"""

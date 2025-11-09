@@ -369,6 +369,12 @@ class MainWindow:
             messagebox.showwarning("警告", "校正するテキストを入力してください。")
             return
 
+        style = self.style_var.get()
+
+        if not style:
+            messagebox.showwarning("警告", "翻訳スタイルを選択してください。")
+            return
+
         # 校正処理を別スレッドで実行
         self.status_bar.config(text="校正中...")
         self.translate_btn.config(state=tk.DISABLED)
@@ -376,7 +382,7 @@ class MainWindow:
 
         def proofread_thread():
             try:
-                result = self.translation_service.proofread(source_text)
+                result = self.translation_service.proofread(source_text, style)
 
                 # UIスレッドで結果を表示
                 self.root.after(0, lambda: self._show_proofread_result(result))

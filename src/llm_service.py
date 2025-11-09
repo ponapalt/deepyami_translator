@@ -55,6 +55,7 @@ Text to translate:
             ("system", """You are a professional proofreader and editor.
 Your task is to proofread and correct the text while maintaining the original language.
 Fix grammar, spelling, punctuation, and improve clarity where needed.
+Use {style_instruction}.
 Provide ONLY the corrected text without any explanations or notes."""),
             ("user", """Proofread and correct the following text in its original language:
 
@@ -139,12 +140,13 @@ Provide ONLY the corrected text without any explanations or notes."""),
             print(f"翻訳エラー: {e}")
             return None
 
-    def proofread(self, text: str) -> Optional[str]:
+    def proofread(self, text: str, style: str = "ビジネス") -> Optional[str]:
         """
         テキストを校正（言語は維持）
 
         Args:
             text: 校正対象テキスト
+            style: 翻訳スタイル（"ビジネス", "同僚", "友人"）
 
         Returns:
             校正されたテキスト、エラーの場合はNone
@@ -153,9 +155,13 @@ Provide ONLY the corrected text without any explanations or notes."""),
             return ""
 
         try:
+            # スタイル指示を取得
+            style_instruction = self.STYLE_INSTRUCTIONS.get(style, self.STYLE_INSTRUCTIONS["ビジネス"])
+
             # チェーンを実行
             result = self.proofreading_chain.invoke({
-                "text": text
+                "text": text,
+                "style_instruction": style_instruction
             })
 
             return result.strip()
