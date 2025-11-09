@@ -32,6 +32,7 @@ class MainWindow:
         self.root = root
         self.config_manager = config_manager
         self.translation_service = None
+        self.debounce_timer = None  # 自動翻訳用タイマー
 
         # ウィンドウの設定
         self.root.title("DeepYami翻訳アプリ - Tcl/TkとLLMを使った翻訳ツール")
@@ -54,6 +55,11 @@ class MainWindow:
         """メニューバーを作成"""
         menubar = tk.Menu(self.root)
         self.root.config(menu=menubar)
+
+        # ファイルメニュー
+        file_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="ファイル", menu=file_menu)
+        file_menu.add_command(label="終了", command=self._on_exit, accelerator="Alt+F4")
 
         # 編集メニュー
         edit_menu = tk.Menu(menubar, tearoff=0)
@@ -157,6 +163,10 @@ class MainWindow:
             maxundo=-1
         )
         self.source_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # テキスト変更時のイベントバインディング（自動翻訳用）
+        self.source_text.bind('<KeyRelease>', self._on_text_change)
+        self.source_text.bind('<<Paste>>', self._on_text_change)
 
         source_scrollbar = ttk.Scrollbar(source_frame, command=self.source_text.yview)
         source_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
@@ -359,6 +369,26 @@ class MainWindow:
             self.source_text.see(tk.INSERT)
         except tk.TclError:
             pass
+
+    def _on_text_change(self, event=None):
+        """テキスト変更時にdebounceタイマーをリセット"""
+        # 既存のタイマーをキャンセル
+        if self.debounce_timer:
+            self.root.after_cancel(self.debounce_timer)
+
+        # 2秒後に自動翻訳を実行するタイマーをセット
+        if self.translation_service and self.config_manager.is_configured():
+            self.debounce_timer = self.root.after(2000, self._auto_translate)
+
+    def _auto_translate(self):
+        """2秒間の無操作後に自動翻訳を実行"""
+        source_text = self.source_text.get("1.0", tk.END).strip()
+        if source_text and self.target_lang_var.get():
+            self._on_translate()
+
+    def _on_exit(self):
+        """アプリケーションを終了"""
+        self.root.quit()
 
     def _on_settings(self):
         """設定ダイアログを開く"""
