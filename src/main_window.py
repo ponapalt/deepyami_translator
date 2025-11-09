@@ -126,12 +126,12 @@ class MainWindow:
         warning_btn.pack(side=tk.RIGHT, padx=20, pady=10)
 
         # PanedWindowで左右分割（自動リサイズ対応）
-        paned_window = ttk.PanedWindow(self.root, orient=tk.HORIZONTAL)
-        paned_window.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
+        self.paned_window = ttk.PanedWindow(self.root, orient=tk.HORIZONTAL)
+        self.paned_window.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
 
         # 左側: 翻訳元テキスト
-        left_frame = ttk.Frame(paned_window)
-        paned_window.add(left_frame, weight=1)
+        left_frame = ttk.Frame(self.paned_window)
+        self.paned_window.add(left_frame, weight=1)
 
         # 左側ヘッダー
         left_header = ttk.Frame(left_frame)
@@ -205,8 +205,8 @@ class MainWindow:
         self.source_text.config(yscrollcommand=source_scrollbar.set)
 
         # 右側: 翻訳結果テキスト
-        right_frame = ttk.Frame(paned_window)
-        paned_window.add(right_frame, weight=1)
+        right_frame = ttk.Frame(self.paned_window)
+        self.paned_window.add(right_frame, weight=1)
 
         # 右側ヘッダー
         right_header = ttk.Frame(right_frame)
@@ -272,7 +272,7 @@ class MainWindow:
             self.status_bar.config(text="準備完了")
         else:
             # 設定未完了時: 警告バナーを表示、コントロールを無効化
-            self.warning_frame.pack(fill=tk.X, side=tk.TOP, before=self.root.winfo_children()[1])
+            self.warning_frame.pack(fill=tk.X, side=tk.TOP, before=self.paned_window)
             self.source_text.config(state=tk.DISABLED)
             self.translate_btn.config(state=tk.DISABLED)
             self.proofread_btn.config(state=tk.DISABLED)
