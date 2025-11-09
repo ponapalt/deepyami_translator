@@ -4,7 +4,7 @@
 """
 
 import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
+from tkinter import ttk, messagebox
 import threading
 from src.config_manager import ConfigManager
 from src.settings_dialog import SettingsDialog
@@ -32,8 +32,6 @@ class MainWindow:
         self.root = root
         self.config_manager = config_manager
         self.translation_service = None
-        self.current_file = None
-        self.is_modified = False
 
         # ウィンドウの設定
         self.root.title("DeepYami翻訳アプリ")
@@ -60,23 +58,7 @@ class MainWindow:
         # ファイルメニュー
         file_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="ファイル", menu=file_menu)
-        file_menu.add_command(label="新規作成", command=self._on_new, accelerator="Ctrl+N")
-        file_menu.add_command(label="開く", command=self._on_open, accelerator="Ctrl+O")
-        file_menu.add_separator()
-        file_menu.add_command(label="保存", command=self._on_save, accelerator="Ctrl+S")
-        file_menu.add_command(label="名前を付けて保存", command=self._on_save_as, accelerator="Ctrl+Shift+S")
-        file_menu.add_separator()
         file_menu.add_command(label="終了", command=self._on_exit)
-
-        # 編集メニュー
-        edit_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="編集", menu=edit_menu)
-        edit_menu.add_command(label="元に戻す", command=self._on_undo, accelerator="Ctrl+Z")
-        edit_menu.add_command(label="やり直し", command=self._on_redo, accelerator="Ctrl+Y")
-        edit_menu.add_separator()
-        edit_menu.add_command(label="切り取り", command=self._on_cut, accelerator="Ctrl+X")
-        edit_menu.add_command(label="コピー", command=self._on_copy, accelerator="Ctrl+C")
-        edit_menu.add_command(label="貼り付け", command=self._on_paste, accelerator="Ctrl+V")
 
         # 設定メニュー
         settings_menu = tk.Menu(menubar, tearoff=0)
@@ -87,12 +69,6 @@ class MainWindow:
         help_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="ヘルプ", menu=help_menu)
         help_menu.add_command(label="バージョン情報", command=self._on_about)
-
-        # キーボードショートカット
-        self.root.bind('<Control-n>', lambda e: self._on_new())
-        self.root.bind('<Control-o>', lambda e: self._on_open())
-        self.root.bind('<Control-s>', lambda e: self._on_save())
-        self.root.bind('<Control-Shift-S>', lambda e: self._on_save_as())
 
     def _create_widgets(self):
         """UI要素を作成"""
@@ -122,21 +98,21 @@ class MainWindow:
         self.control_frame = ttk.Frame(self.root, padding="10")
         self.control_frame.pack(fill=tk.X)
 
-        # 左側: 翻訳元言語
-        left_lang_frame = ttk.Frame(self.control_frame)
-        left_lang_frame.pack(side=tk.LEFT, padx=5)
-        ttk.Label(left_lang_frame, text="翻訳元:").pack(side=tk.LEFT, padx=(0, 5))
-        self.source_lang_var = tk.StringVar()
-        self.source_lang_combo = ttk.Combobox(
-            left_lang_frame,
-            textvariable=self.source_lang_var,
+        # 翻訳先言語選択
+        lang_frame = ttk.Frame(self.control_frame)
+        lang_frame.pack(side=tk.LEFT, padx=5)
+        ttk.Label(lang_frame, text="翻訳先:").pack(side=tk.LEFT, padx=(0, 5))
+        self.target_lang_var = tk.StringVar()
+        self.target_lang_combo = ttk.Combobox(
+            lang_frame,
+            textvariable=self.target_lang_var,
             values=self.LANGUAGES,
             state="readonly",
             width=20
         )
-        self.source_lang_combo.pack(side=tk.LEFT)
+        self.target_lang_combo.pack(side=tk.LEFT)
 
-        # 中央: 翻訳ボタン
+        # 翻訳ボタン
         self.translate_btn = ttk.Button(
             self.control_frame,
             text="翻訳 →",
@@ -145,52 +121,43 @@ class MainWindow:
         )
         self.translate_btn.pack(side=tk.LEFT, padx=20)
 
-        # 右側: 翻訳先言語
-        right_lang_frame = ttk.Frame(self.control_frame)
-        right_lang_frame.pack(side=tk.LEFT, padx=5)
-        ttk.Label(right_lang_frame, text="翻訳先:").pack(side=tk.LEFT, padx=(0, 5))
-        self.target_lang_var = tk.StringVar()
-        self.target_lang_combo = ttk.Combobox(
-            right_lang_frame,
-            textvariable=self.target_lang_var,
-            values=self.LANGUAGES,
-            state="readonly",
-            width=20
-        )
-        self.target_lang_combo.pack(side=tk.LEFT)
-
-        # テキストエリアフレーム
-        text_frame = ttk.Frame(self.root)
-        text_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
+        # PanedWindowで左右分割（自動リサイズ対応）
+        paned_window = ttk.PanedWindow(self.root, orient=tk.HORIZONTAL)
+        paned_window.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
 
         # 左側: 翻訳元テキスト
-        left_frame = ttk.Frame(text_frame)
-        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
+        left_frame = ttk.Frame(paned_window)
+        paned_window.add(left_frame, weight=1)
 
         ttk.Label(left_frame, text="翻訳元テキスト").pack(anchor=tk.W, pady=(0, 5))
 
+        source_frame = ttk.Frame(left_frame)
+        source_frame.pack(fill=tk.BOTH, expand=True)
+
         self.source_text = tk.Text(
-            left_frame,
+            source_frame,
             wrap=tk.WORD,
             font=('Arial', 11),
             undo=True,
             maxundo=-1
         )
         self.source_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        self.source_text.bind('<<Modified>>', self._on_text_modified)
 
-        source_scrollbar = ttk.Scrollbar(left_frame, command=self.source_text.yview)
+        source_scrollbar = ttk.Scrollbar(source_frame, command=self.source_text.yview)
         source_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.source_text.config(yscrollcommand=source_scrollbar.set)
 
-        # 右側: 翻訳先テキスト
-        right_frame = ttk.Frame(text_frame)
-        right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(5, 0))
+        # 右側: 翻訳結果テキスト
+        right_frame = ttk.Frame(paned_window)
+        paned_window.add(right_frame, weight=1)
 
         ttk.Label(right_frame, text="翻訳結果").pack(anchor=tk.W, pady=(0, 5))
 
+        target_frame = ttk.Frame(right_frame)
+        target_frame.pack(fill=tk.BOTH, expand=True)
+
         self.target_text = tk.Text(
-            right_frame,
+            target_frame,
             wrap=tk.WORD,
             font=('Arial', 11),
             state=tk.DISABLED,
@@ -198,7 +165,7 @@ class MainWindow:
         )
         self.target_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        target_scrollbar = ttk.Scrollbar(right_frame, command=self.target_text.yview)
+        target_scrollbar = ttk.Scrollbar(target_frame, command=self.target_text.yview)
         target_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.target_text.config(yscrollcommand=target_scrollbar.set)
 
@@ -212,8 +179,7 @@ class MainWindow:
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
 
         # 最後に使用した言語を設定
-        source_lang, target_lang = self.config_manager.get_last_languages()
-        self.source_lang_var.set(source_lang)
+        _, target_lang = self.config_manager.get_last_languages()
         self.target_lang_var.set(target_lang)
 
     def _update_ui_state(self):
@@ -225,7 +191,6 @@ class MainWindow:
             self.warning_frame.pack_forget()
             self.source_text.config(state=tk.NORMAL)
             self.translate_btn.config(state=tk.NORMAL)
-            self.source_lang_combo.config(state="readonly")
             self.target_lang_combo.config(state="readonly")
             self.status_bar.config(text="準備完了")
         else:
@@ -233,7 +198,6 @@ class MainWindow:
             self.warning_frame.pack(fill=tk.X, before=self.control_frame)
             self.source_text.config(state=tk.DISABLED)
             self.translate_btn.config(state=tk.DISABLED)
-            self.source_lang_combo.config(state=tk.DISABLED)
             self.target_lang_combo.config(state=tk.DISABLED)
             self.status_bar.config(text="API設定が必要です")
 
@@ -250,22 +214,6 @@ class MainWindow:
             messagebox.showerror("エラー", f"翻訳サービスの初期化に失敗しました:\n{str(e)}")
             self.status_bar.config(text="翻訳サービスエラー")
 
-    def _on_text_modified(self, event=None):
-        """テキスト変更時の処理"""
-        if self.source_text.edit_modified():
-            self.is_modified = True
-            self._update_title()
-            self.source_text.edit_modified(False)
-
-    def _update_title(self):
-        """ウィンドウタイトルを更新"""
-        title = "DeepYami翻訳アプリ"
-        if self.current_file:
-            title = f"{self.current_file} - {title}"
-        if self.is_modified:
-            title = f"*{title}"
-        self.root.title(title)
-
     def _on_translate(self):
         """翻訳ボタンクリック時の処理"""
         if not self.translation_service:
@@ -277,19 +225,14 @@ class MainWindow:
             messagebox.showwarning("警告", "翻訳するテキストを入力してください。")
             return
 
-        source_lang = self.source_lang_var.get()
         target_lang = self.target_lang_var.get()
 
-        if not source_lang or not target_lang:
-            messagebox.showwarning("警告", "翻訳元と翻訳先の言語を選択してください。")
+        if not target_lang:
+            messagebox.showwarning("警告", "翻訳先の言語を選択してください。")
             return
 
-        if source_lang == target_lang:
-            messagebox.showwarning("警告", "翻訳元と翻訳先の言語が同じです。")
-            return
-
-        # 言語設定を保存
-        self.config_manager.set_last_languages(source_lang, target_lang)
+        # 言語設定を保存（翻訳元は自動検出なので空文字列）
+        self.config_manager.set_last_languages("", target_lang)
         self.config_manager.save()
 
         # 翻訳処理を別スレッドで実行
@@ -300,7 +243,6 @@ class MainWindow:
             try:
                 result = self.translation_service.translate(
                     source_text,
-                    source_lang,
                     target_lang
                 )
 
@@ -331,121 +273,9 @@ class MainWindow:
         self.status_bar.config(text="翻訳エラー")
         self.translate_btn.config(state=tk.NORMAL)
 
-    def _on_new(self):
-        """新規作成"""
-        if self._confirm_save_changes():
-            self.source_text.delete("1.0", tk.END)
-            self.target_text.config(state=tk.NORMAL)
-            self.target_text.delete("1.0", tk.END)
-            self.target_text.config(state=tk.DISABLED)
-            self.current_file = None
-            self.is_modified = False
-            self._update_title()
-
-    def _on_open(self):
-        """ファイルを開く"""
-        if self._confirm_save_changes():
-            file_path = filedialog.askopenfilename(
-                title="ファイルを開く",
-                filetypes=[("テキストファイル", "*.txt"), ("すべてのファイル", "*.*")]
-            )
-            if file_path:
-                try:
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        content = f.read()
-                    self.source_text.delete("1.0", tk.END)
-                    self.source_text.insert("1.0", content)
-                    self.current_file = file_path
-                    self.is_modified = False
-                    self._update_title()
-                except Exception as e:
-                    messagebox.showerror("エラー", f"ファイルの読み込みに失敗しました:\n{str(e)}")
-
-    def _on_save(self):
-        """保存"""
-        if self.current_file:
-            self._save_to_file(self.current_file)
-        else:
-            self._on_save_as()
-
-    def _on_save_as(self):
-        """名前を付けて保存"""
-        file_path = filedialog.asksaveasfilename(
-            title="名前を付けて保存",
-            defaultextension=".txt",
-            filetypes=[("テキストファイル", "*.txt"), ("すべてのファイル", "*.*")]
-        )
-        if file_path:
-            self._save_to_file(file_path)
-
-    def _save_to_file(self, file_path: str):
-        """ファイルに保存"""
-        try:
-            content = self.source_text.get("1.0", tk.END)
-            with open(file_path, 'w', encoding='utf-8') as f:
-                f.write(content)
-            self.current_file = file_path
-            self.is_modified = False
-            self._update_title()
-            self.status_bar.config(text=f"保存しました: {file_path}")
-        except Exception as e:
-            messagebox.showerror("エラー", f"ファイルの保存に失敗しました:\n{str(e)}")
-
-    def _confirm_save_changes(self) -> bool:
-        """変更を保存するか確認"""
-        if self.is_modified:
-            result = messagebox.askyesnocancel(
-                "確認",
-                "変更を保存しますか?"
-            )
-            if result is True:  # Yes
-                self._on_save()
-                return True
-            elif result is False:  # No
-                return True
-            else:  # Cancel
-                return False
-        return True
-
     def _on_exit(self):
         """終了"""
-        if self._confirm_save_changes():
-            self.root.quit()
-
-    def _on_undo(self):
-        """元に戻す"""
-        try:
-            self.source_text.edit_undo()
-        except tk.TclError:
-            pass
-
-    def _on_redo(self):
-        """やり直し"""
-        try:
-            self.source_text.edit_redo()
-        except tk.TclError:
-            pass
-
-    def _on_cut(self):
-        """切り取り"""
-        try:
-            self.source_text.event_generate("<<Cut>>")
-        except tk.TclError:
-            pass
-
-    def _on_copy(self):
-        """コピー"""
-        try:
-            self.source_text.event_generate("<<Copy>>")
-        except tk.TclError:
-            pass
-
-    def _on_paste(self):
-        """貼り付け"""
-        try:
-            self.source_text.event_generate("<<Paste>>")
-        except tk.TclError:
-            pass
+        self.root.quit()
 
     def _on_settings(self):
         """設定ダイアログを開く"""

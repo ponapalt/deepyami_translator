@@ -34,8 +34,9 @@ class TranslationService:
         self.prompt_template = ChatPromptTemplate.from_messages([
             ("system", """You are a professional translator with expertise in multiple languages.
 Your task is to translate text accurately while maintaining the original tone, style, and nuance.
+Automatically detect the source language and translate to the target language.
 Provide ONLY the translation without any explanations, notes, or additional text."""),
-            ("user", """Translate the following text from {source_lang} to {target_lang}.
+            ("user", """Translate the following text to {target_lang}.
 
 Text to translate:
 {text}""")
@@ -81,13 +82,12 @@ Text to translate:
         else:
             raise ValueError(f"サポートされていないモデルタイプ: {self.model_type}")
 
-    def translate(self, text: str, source_lang: str, target_lang: str) -> Optional[str]:
+    def translate(self, text: str, target_lang: str) -> Optional[str]:
         """
-        テキストを翻訳
+        テキストを翻訳（自動言語検出）
 
         Args:
             text: 翻訳対象テキスト
-            source_lang: 翻訳元言語（LANGUAGE_MAPのキー）
             target_lang: 翻訳先言語（LANGUAGE_MAPのキー）
 
         Returns:
@@ -96,18 +96,12 @@ Text to translate:
         if not text.strip():
             return ""
 
-        # 同じ言語の場合は翻訳不要
-        if source_lang == target_lang:
-            return text
-
         try:
             # 言語名を取得
-            source_lang_name = self.LANGUAGE_MAP.get(source_lang, source_lang)
             target_lang_name = self.LANGUAGE_MAP.get(target_lang, target_lang)
 
             # チェーンを実行
             result = self.chain.invoke({
-                "source_lang": source_lang_name,
                 "target_lang": target_lang_name,
                 "text": text
             })
@@ -129,7 +123,6 @@ Text to translate:
             # 簡単なテスト翻訳を実行
             result = self.translate(
                 "Hello",
-                "English",
                 "Japanese"
             )
 
