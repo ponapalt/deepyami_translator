@@ -23,7 +23,9 @@ class ConfigManager:
         "auto_translate_enabled": False,  # 自動翻訳のON/OFF
         "translation_style": "ビジネス",  # 翻訳スタイル: "ビジネス", "同僚", "友人"
         "last_source_text": "",  # 最後に編集した翻訳元テキスト
-        "last_target_text": ""   # 最後の翻訳結果
+        "last_target_text": "",   # 最後の翻訳結果
+        "window_width": 1000,  # ウィンドウの幅
+        "window_height": 600   # ウィンドウの高さ
     }
 
     def __init__(self, config_path: str = "config.json"):
@@ -87,11 +89,11 @@ class ConfigManager:
         api_keys = self.config.get("api_keys", {})
 
         # モデルに対応するAPIキーが設定されているかチェック
-        if model_type == "gpt4":
+        if model_type in ["gpt4", "gpt4-mini"]:
             return bool(api_keys.get("openai", "").strip())
-        elif model_type == "claude":
+        elif model_type in ["claude", "claude-haiku"]:
             return bool(api_keys.get("anthropic", "").strip())
-        elif model_type == "gemini":
+        elif model_type in ["gemini", "gemini-flash"]:
             return bool(api_keys.get("google", "").strip())
 
         return False
@@ -106,11 +108,11 @@ class ConfigManager:
         model_type = self.config.get("model_type", "")
         api_keys = self.config.get("api_keys", {})
 
-        if model_type == "gpt4":
+        if model_type in ["gpt4", "gpt4-mini"]:
             return api_keys.get("openai", "").strip() or None
-        elif model_type == "claude":
+        elif model_type in ["claude", "claude-haiku"]:
             return api_keys.get("anthropic", "").strip() or None
-        elif model_type == "gemini":
+        elif model_type in ["gemini", "gemini-flash"]:
             return api_keys.get("google", "").strip() or None
 
         return None
@@ -120,9 +122,9 @@ class ConfigManager:
         使用するLLMモデルを設定
 
         Args:
-            model_type: "gpt4", "claude", "gemini"のいずれか
+            model_type: "gpt4", "gpt4-mini", "claude", "claude-haiku", "gemini", "gemini-flash"のいずれか
         """
-        if model_type in ["gpt4", "claude", "gemini"]:
+        if model_type in ["gpt4", "gpt4-mini", "claude", "claude-haiku", "gemini", "gemini-flash"]:
             self.config["model_type"] = model_type
 
     def set_api_key(self, provider: str, api_key: str) -> None:
@@ -218,3 +220,26 @@ class ConfigManager:
         """
         self.config["last_source_text"] = source_text
         self.config["last_target_text"] = target_text
+
+    def get_window_size(self) -> tuple:
+        """
+        ウィンドウサイズを取得
+
+        Returns:
+            (width, height)のタプル
+        """
+        return (
+            self.config.get("window_width", 1000),
+            self.config.get("window_height", 600)
+        )
+
+    def set_window_size(self, width: int, height: int) -> None:
+        """
+        ウィンドウサイズを保存
+
+        Args:
+            width: ウィンドウの幅
+            height: ウィンドウの高さ
+        """
+        self.config["window_width"] = width
+        self.config["window_height"] = height

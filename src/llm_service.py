@@ -88,6 +88,13 @@ Provide ONLY the corrected text without any explanations or notes."""),
                 temperature=0.3,
                 api_key=self.api_key
             )
+        elif self.model_type == "gpt4-mini":
+            from langchain_openai import ChatOpenAI
+            return ChatOpenAI(
+                model="gpt-4o-mini",
+                temperature=0.3,
+                api_key=self.api_key
+            )
         elif self.model_type == "claude":
             from langchain_anthropic import ChatAnthropic
             return ChatAnthropic(
@@ -95,7 +102,21 @@ Provide ONLY the corrected text without any explanations or notes."""),
                 temperature=0.3,
                 api_key=self.api_key
             )
+        elif self.model_type == "claude-haiku":
+            from langchain_anthropic import ChatAnthropic
+            return ChatAnthropic(
+                model="claude-3-5-haiku-20241022",
+                temperature=0.3,
+                api_key=self.api_key
+            )
         elif self.model_type == "gemini":
+            from langchain_google_genai import ChatGoogleGenerativeAI
+            return ChatGoogleGenerativeAI(
+                model="gemini-2.0-flash-exp",
+                temperature=0.3,
+                google_api_key=self.api_key
+            )
+        elif self.model_type == "gemini-flash":
             from langchain_google_genai import ChatGoogleGenerativeAI
             return ChatGoogleGenerativeAI(
                 model="gemini-2.0-flash-exp",

@@ -94,6 +94,16 @@ class MainWindow:
         "友人"
     ]
 
+    # モデル名の表示マッピング
+    MODEL_DISPLAY_NAMES = {
+        "gpt4": "GPT-4.1",
+        "gpt4-mini": "GPT-4.1-mini",
+        "claude": "Claude Sonnet 4.5",
+        "claude-haiku": "Claude Haiku 4.5",
+        "gemini": "Gemini 2.5 Pro",
+        "gemini-flash": "Gemini Flash 2.5"
+    }
+
     def __init__(self, root: tk.Tk, config_manager: ConfigManager):
         """
         Args:
@@ -107,7 +117,10 @@ class MainWindow:
 
         # ウィンドウの設定
         self.root.title("DeepYami翻訳アプリ - Tcl/TkとLLMを使った翻訳ツール")
-        self.root.geometry("1000x600")
+
+        # 保存されたウィンドウサイズを復元
+        width, height = self.config_manager.get_window_size()
+        self.root.geometry(f"{width}x{height}")
 
         # メニューバーの作成
         self._create_menu()
@@ -121,6 +134,9 @@ class MainWindow:
         # 翻訳サービスの初期化
         if self.config_manager.is_configured():
             self._initialize_translation_service()
+        else:
+            # 未設定の場合もモデル表示を初期化
+            self._update_model_display(None)
 
         # 最後に編集したテキストを復元（debounceが発火しないようにイベントを一時解除）
         self._restore_last_texts()
@@ -301,8 +317,18 @@ class MainWindow:
             command=self._on_copy_result,
             width=20
         )
-        self.copy_result_btn.pack(side=tk.LEFT)
+        self.copy_result_btn.pack(side=tk.LEFT, padx=(0, 10))
         ToolTip(self.copy_result_btn, "翻訳結果をクリップボードにコピー")
+
+        # 現在のモデル表示ラベル
+        self.current_model_label = ttk.Label(
+            right_control,
+            text="モデル: 未設定",
+            font=('Arial', 9),
+            foreground="#666666"
+        )
+        self.current_model_label.pack(side=tk.LEFT)
+        ToolTip(self.current_model_label, "現在使用中のLLMモデル")
 
         # 右側テキストエリア
         target_frame = ttk.Frame(right_frame)
@@ -390,10 +416,21 @@ class MainWindow:
 
             if model_type and api_key:
                 self.translation_service = TranslationService(model_type, api_key)
-                self.status_bar.config(text=f"翻訳サービス準備完了 ({model_type.upper()})")
+                model_display_name = self.MODEL_DISPLAY_NAMES.get(model_type, model_type.upper())
+                self.status_bar.config(text=f"翻訳サービス準備完了 ({model_display_name})")
+                self._update_model_display(model_type)
         except Exception as e:
             messagebox.showerror("エラー", f"翻訳サービスの初期化に失敗しました:\n{str(e)}")
             self.status_bar.config(text="翻訳サービスエラー")
+            self._update_model_display(None)
+
+    def _update_model_display(self, model_type: str = None):
+        """現在のモデル表示を更新"""
+        if model_type:
+            model_display_name = self.MODEL_DISPLAY_NAMES.get(model_type, model_type)
+            self.current_model_label.config(text=f"モデル: {model_display_name}")
+        else:
+            self.current_model_label.config(text="モデル: 未設定")
 
     def _on_translate(self):
         """翻訳ボタンクリック時の処理"""
@@ -640,11 +677,17 @@ class MainWindow:
         self.root.quit()
 
     def _on_window_close(self):
-        """ウィンドウ閉じる時の処理（テキストを保存）"""
+        """ウィンドウ閉じる時の処理（テキストとウィンドウサイズを保存）"""
         # 現在のテキストを保存
         source_text = self.source_text.get("1.0", tk.END).strip()
         target_text = self.target_text.get("1.0", tk.END).strip()
         self.config_manager.set_last_texts(source_text, target_text)
+
+        # ウィンドウサイズを保存
+        width = self.root.winfo_width()
+        height = self.root.winfo_height()
+        self.config_manager.set_window_size(width, height)
+
         self.config_manager.save()
         # ウィンドウを閉じる
         self.root.destroy()
@@ -683,8 +726,11 @@ class MainWindow:
             "LangChainと複数のLLMモデルを使用した翻訳アプリケーション\n\n"
             "対応モデル:\n"
             "- OpenAI GPT-4.1\n"
+            "- OpenAI GPT-4.1-mini\n"
             "- Anthropic Claude Sonnet 4.5\n"
-            "- Google Gemini 2.5 Pro"
+            "- Anthropic Claude Haiku 4.5\n"
+            "- Google Gemini 2.5 Pro\n"
+            "- Google Gemini Flash 2.5"
         )
 
     def _detect_language(self, text: str) -> str:
