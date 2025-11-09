@@ -119,11 +119,11 @@ class MainWindow:
         warning_btn.pack(side=tk.RIGHT, padx=20, pady=10)
 
         # コントロールフレーム
-        control_frame = ttk.Frame(self.root, padding="10")
-        control_frame.pack(fill=tk.X)
+        self.control_frame = ttk.Frame(self.root, padding="10")
+        self.control_frame.pack(fill=tk.X)
 
         # 左側: 翻訳元言語
-        left_lang_frame = ttk.Frame(control_frame)
+        left_lang_frame = ttk.Frame(self.control_frame)
         left_lang_frame.pack(side=tk.LEFT, padx=5)
         ttk.Label(left_lang_frame, text="翻訳元:").pack(side=tk.LEFT, padx=(0, 5))
         self.source_lang_var = tk.StringVar()
@@ -138,7 +138,7 @@ class MainWindow:
 
         # 中央: 翻訳ボタン
         self.translate_btn = ttk.Button(
-            control_frame,
+            self.control_frame,
             text="翻訳 →",
             command=self._on_translate,
             width=15
@@ -146,7 +146,7 @@ class MainWindow:
         self.translate_btn.pack(side=tk.LEFT, padx=20)
 
         # 右側: 翻訳先言語
-        right_lang_frame = ttk.Frame(control_frame)
+        right_lang_frame = ttk.Frame(self.control_frame)
         right_lang_frame.pack(side=tk.LEFT, padx=5)
         ttk.Label(right_lang_frame, text="翻訳先:").pack(side=tk.LEFT, padx=(0, 5))
         self.target_lang_var = tk.StringVar()
@@ -230,7 +230,7 @@ class MainWindow:
             self.status_bar.config(text="準備完了")
         else:
             # 設定未完了時: 警告バナーを表示、コントロールを無効化
-            self.warning_frame.pack(fill=tk.X, after=self.root.nametowidget(str(self.root.winfo_children()[0])))
+            self.warning_frame.pack(fill=tk.X, before=self.control_frame)
             self.source_text.config(state=tk.DISABLED)
             self.translate_btn.config(state=tk.DISABLED)
             self.source_lang_combo.config(state=tk.DISABLED)
