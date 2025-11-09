@@ -43,7 +43,13 @@ class TranslationService:
 Your task is to translate text accurately while maintaining the appropriate tone and style.
 Automatically detect the source language and translate to the target language.
 Use {style_instruction}.
-Provide ONLY the translation without any explanations, notes, or additional text."""),
+
+CRITICAL INSTRUCTIONS:
+- Output ONLY the translated text itself
+- DO NOT include any prefixes like "Here's the translation:", "Translation:", or similar
+- DO NOT include any explanations, notes, or commentary
+- DO NOT include quotation marks around the translation
+- Start your response directly with the translated text"""),
             ("user", """Translate the following text to {target_lang}.
 
 Text to translate:
@@ -56,7 +62,13 @@ Text to translate:
 Your task is to proofread and correct the text while maintaining the original language.
 Fix grammar, spelling, punctuation, and improve clarity where needed.
 Use {style_instruction}.
-Provide ONLY the corrected text without any explanations or notes."""),
+
+CRITICAL INSTRUCTIONS:
+- Output ONLY the corrected text itself
+- DO NOT include any prefixes like "Here's the corrected text:", "Proofread version:", or similar
+- DO NOT include any explanations, notes, or commentary
+- DO NOT include quotation marks around the corrected text
+- Start your response directly with the corrected text"""),
             ("user", """Proofread and correct the following text in its original language:
 
 {text}""")
@@ -157,7 +169,13 @@ Provide ONLY the corrected text without any explanations or notes."""),
                     ("system", """You are a professional translator with expertise in multiple languages.
 Your task is to translate text accurately while maintaining the original meaning and nuance.
 If the source language is the same as the target language, output the text in that language without translating.
-Provide ONLY the translated text (or original text if same language) without any explanations, notes, or additional text."""),
+
+CRITICAL INSTRUCTIONS:
+- Output ONLY the translated text itself
+- DO NOT include any prefixes like "Here's the translation:", "Translation:", or similar
+- DO NOT include any explanations, notes, or commentary
+- DO NOT include quotation marks around the translation
+- Start your response directly with the translated text"""),
                     ("user", """Translate the following text to {target_lang}.
 If the text is already in {target_lang}, keep it in {target_lang}.
 
@@ -249,7 +267,13 @@ Text to translate:
                     ("system", """You are a professional proofreader and editor.
 Your task is to proofread and correct the text while maintaining the original language.
 Fix grammar, spelling, punctuation, and improve clarity where needed.
-Provide ONLY the corrected text without any explanations or notes."""),
+
+CRITICAL INSTRUCTIONS:
+- Output ONLY the corrected text itself
+- DO NOT include any prefixes like "Here's the corrected text:", "Proofread version:", or similar
+- DO NOT include any explanations, notes, or commentary
+- DO NOT include quotation marks around the corrected text
+- Start your response directly with the corrected text"""),
                     ("user", """Proofread and correct the following text in its original language:
 
 {text}""")
