@@ -212,6 +212,7 @@ class MainWindow:
             width=18
         )
         self.target_lang_combo.pack(side=tk.LEFT, padx=(0, 10))
+        ToolTip(self.target_lang_combo, "翻訳先の言語を選択")
 
         # 翻訳スタイル
         ttk.Label(left_control, text="スタイル:").pack(side=tk.LEFT, padx=(0, 5))
@@ -224,6 +225,7 @@ class MainWindow:
             width=10
         )
         self.style_combo.pack(side=tk.LEFT, padx=(0, 10))
+        ToolTip(self.style_combo, "翻訳のスタイルを選択")
 
         # 翻訳ボタン
         self.translate_btn = ttk.Button(
@@ -233,6 +235,7 @@ class MainWindow:
             width=10
         )
         self.translate_btn.pack(side=tk.LEFT, padx=(0, 5))
+        ToolTip(self.translate_btn, "選択した言語とスタイルで翻訳を実行")
 
         # 校正ボタン
         self.proofread_btn = ttk.Button(
@@ -242,6 +245,7 @@ class MainWindow:
             width=10
         )
         self.proofread_btn.pack(side=tk.LEFT, padx=(0, 5))
+        ToolTip(self.proofread_btn, "元の言語を維持したまま文法・スペルを修正")
 
         # 入れ替えボタン
         self.swap_btn = ttk.Button(
@@ -251,19 +255,26 @@ class MainWindow:
             width=12
         )
         self.swap_btn.pack(side=tk.LEFT)
+        ToolTip(self.swap_btn, "翻訳元と翻訳結果を入れ替える")
 
         # 左側テキストエリア
         source_frame = ttk.Frame(left_frame)
         source_frame.pack(fill=tk.BOTH, expand=True)
+
+        # スクロールバー（常に表示）- テキストより先にpackする
+        source_scrollbar = ttk.Scrollbar(source_frame)
+        source_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
         self.source_text = tk.Text(
             source_frame,
             wrap=tk.WORD,
             font=('Arial', 11),
             undo=True,
-            maxundo=-1
+            maxundo=-1,
+            yscrollcommand=source_scrollbar.set
         )
         self.source_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        source_scrollbar.config(command=self.source_text.yview)
 
         # テキスト変更時のイベントバインディング（自動翻訳用）
         self.source_text.bind('<KeyRelease>', self._on_text_change)
@@ -273,10 +284,8 @@ class MainWindow:
         self.source_text.bind('<App>', self._show_source_context_menu)  # コンテキストメニューキー
         self.source_text.bind('<Control-F10>', self._show_source_context_menu)  # Ctrl+F10
 
-        # スクロールバー（常に表示）
-        source_scrollbar = ttk.Scrollbar(source_frame, command=self.source_text.yview)
-        source_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        self.source_text.config(yscrollcommand=source_scrollbar.set)
+        # ツールチップを追加（遅延表示）
+        ToolTip(self.source_text, "翻訳元テキスト")
 
         # 右側: 翻訳結果テキスト
         right_frame = ttk.Frame(self.paned_window)
@@ -293,18 +302,25 @@ class MainWindow:
             width=20
         )
         self.copy_result_btn.pack(side=tk.LEFT)
+        ToolTip(self.copy_result_btn, "翻訳結果をクリップボードにコピー")
 
         # 右側テキストエリア
         target_frame = ttk.Frame(right_frame)
         target_frame.pack(fill=tk.BOTH, expand=True)
 
+        # スクロールバー（常に表示）- テキストより先にpackする
+        target_scrollbar = ttk.Scrollbar(target_frame)
+        target_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
         self.target_text = tk.Text(
             target_frame,
             wrap=tk.WORD,
             font=('Arial', 11),
-            bg="#f5f5f5"
+            bg="#f5f5f5",
+            yscrollcommand=target_scrollbar.set
         )
         self.target_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        target_scrollbar.config(command=self.target_text.yview)
 
         # 編集を防ぐために、キー入力をブロック（ただしコピー系のショートカットは許可）
         def block_edit(event):
@@ -322,10 +338,8 @@ class MainWindow:
         self.target_text.bind('<App>', self._show_target_context_menu)  # コンテキストメニューキー
         self.target_text.bind('<Control-F10>', self._show_target_context_menu)  # Ctrl+F10
 
-        # スクロールバー（常に表示）
-        target_scrollbar = ttk.Scrollbar(target_frame, command=self.target_text.yview)
-        target_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        self.target_text.config(yscrollcommand=target_scrollbar.set)
+        # ツールチップを追加（遅延表示）
+        ToolTip(self.target_text, "翻訳結果")
 
         # ステータスバー
         self.status_bar = ttk.Label(
