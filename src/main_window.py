@@ -823,7 +823,7 @@ class MainWindow:
         """バージョン情報"""
         messagebox.showinfo(
             "バージョン情報",
-            "DeepYami翻訳アプリ v1.0\n\n"
+            "DeepYami翻訳アプリ v1.1\n\n"
             "LangChainと複数のLLMモデルを使用した翻訳アプリケーション\n\n"
             "対応モデル:\n"
             "- OpenAI GPT-4.1\n"
