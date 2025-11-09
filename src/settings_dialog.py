@@ -243,7 +243,6 @@ class SettingsDialog:
 
         if self.config_manager.save():
             self.result = True
-            messagebox.showinfo("成功", "設定を保存しました。")
             self.dialog.destroy()
         else:
             messagebox.showerror("エラー", "設定の保存に失敗しました。")

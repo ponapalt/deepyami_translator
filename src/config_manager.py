@@ -21,7 +21,9 @@ class ConfigManager:
         "last_source_lang": "Japanese",
         "last_target_lang": "English",
         "auto_translate_enabled": False,  # 自動翻訳のON/OFF
-        "translation_style": "ビジネス"  # 翻訳スタイル: "ビジネス", "同僚", "友人"
+        "translation_style": "ビジネス",  # 翻訳スタイル: "ビジネス", "同僚", "友人"
+        "last_source_text": "",  # 最後に編集した翻訳元テキスト
+        "last_target_text": ""   # 最後の翻訳結果
     }
 
     def __init__(self, config_path: str = "config.json"):
@@ -193,3 +195,26 @@ class ConfigManager:
         """
         if style in ["ビジネス", "同僚", "友人"]:
             self.config["translation_style"] = style
+
+    def get_last_texts(self) -> tuple:
+        """
+        最後に編集したテキストを取得
+
+        Returns:
+            (source_text, target_text)のタプル
+        """
+        return (
+            self.config.get("last_source_text", ""),
+            self.config.get("last_target_text", "")
+        )
+
+    def set_last_texts(self, source_text: str, target_text: str) -> None:
+        """
+        最後に編集したテキストを保存
+
+        Args:
+            source_text: 翻訳元テキスト
+            target_text: 翻訳先テキスト
+        """
+        self.config["last_source_text"] = source_text
+        self.config["last_target_text"] = target_text

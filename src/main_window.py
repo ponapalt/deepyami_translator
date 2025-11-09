@@ -58,6 +58,12 @@ class MainWindow:
         if self.config_manager.is_configured():
             self._initialize_translation_service()
 
+        # 最後に編集したテキストを復元（debounceが発火しないようにイベントを一時解除）
+        self._restore_last_texts()
+
+        # ウィンドウ終了時にテキストを保存
+        self.root.protocol("WM_DELETE_WINDOW", self._on_window_close)
+
     def _create_menu(self):
         """メニューバーを作成"""
         menubar = tk.Menu(self.root)
@@ -487,6 +493,36 @@ class MainWindow:
     def _on_exit(self):
         """アプリケーションを終了"""
         self.root.quit()
+
+    def _on_window_close(self):
+        """ウィンドウ閉じる時の処理（テキストを保存）"""
+        # 現在のテキストを保存
+        source_text = self.source_text.get("1.0", tk.END).strip()
+        target_text = self.target_text.get("1.0", tk.END).strip()
+        self.config_manager.set_last_texts(source_text, target_text)
+        self.config_manager.save()
+        # ウィンドウを閉じる
+        self.root.destroy()
+
+    def _restore_last_texts(self):
+        """最後に編集したテキストを復元（debounceを発火させない）"""
+        source_text, target_text = self.config_manager.get_last_texts()
+
+        if source_text or target_text:
+            # テキスト変更イベントを一時的に解除
+            self.source_text.unbind('<KeyRelease>')
+
+            # テキストを復元
+            if source_text:
+                self.source_text.insert("1.0", source_text)
+
+            if target_text:
+                self.target_text.config(state=tk.NORMAL)
+                self.target_text.insert("1.0", target_text)
+                self.target_text.config(state=tk.DISABLED)
+
+            # イベントバインディングを再設定
+            self.source_text.bind('<KeyRelease>', self._on_text_change)
 
     def _on_settings(self):
         """設定ダイアログを開く"""
