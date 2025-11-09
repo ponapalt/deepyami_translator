@@ -1,16 +1,15 @@
 @echo off
-chcp 65001 >nul
 setlocal enabledelayedexpansion
 
 echo ========================================
-echo DeepYami翻訳アプリ
+echo DeepYami Translation App
 echo ========================================
 echo.
 
 python --version >nul 2>&1
 if errorlevel 1 (
-    echo [エラー] Pythonが見つかりません。
-    echo Pythonをインストールしてから再度実行してください。
+    echo [ERROR] Python not found.
+    echo Please install Python and try again.
     echo https://www.python.org/downloads/
     echo.
     pause
@@ -18,51 +17,51 @@ if errorlevel 1 (
 )
 
 if not exist "venv\" (
-    echo [1/3] 仮想環境を作成しています...
+    echo [1/3] Creating virtual environment...
     python -m venv venv
     if errorlevel 1 (
-        echo [エラー] 仮想環境の作成に失敗しました。
+        echo [ERROR] Failed to create virtual environment.
         pause
         exit /b 1
     )
-    echo 仮想環境を作成しました。
+    echo Virtual environment created.
     echo.
 ) else (
-    echo [1/3] 仮想環境が見つかりました。
+    echo [1/3] Virtual environment found.
     echo.
 )
 
-echo [2/3] 仮想環境を有効化しています...
+echo [2/3] Activating virtual environment...
 call venv\Scripts\activate.bat
 if errorlevel 1 (
-    echo [エラー] 仮想環境の有効化に失敗しました。
+    echo [ERROR] Failed to activate virtual environment.
     pause
     exit /b 1
 )
 echo.
 
-echo [3/3] 依存関係をインストールしています...
-echo これには数分かかる場合があります...
+echo [3/3] Installing dependencies...
+echo This may take a few minutes...
 python -m pip install --upgrade pip >nul 2>&1
 pip install -r requirements.txt
 if errorlevel 1 (
-    echo [エラー] 依存関係のインストールに失敗しました。
-    echo インターネット接続を確認してください。
+    echo [ERROR] Failed to install dependencies.
+    echo Please check your internet connection.
     pause
     exit /b 1
 )
-echo 依存関係をインストールしました。
+echo Dependencies installed.
 echo.
 
 echo ========================================
-echo アプリケーションを起動します...
+echo Starting application...
 echo ========================================
 echo.
 python app.py
 
 if errorlevel 1 (
     echo.
-    echo [エラー] アプリケーションの起動に失敗しました。
+    echo [ERROR] Failed to start application.
     pause
     exit /b 1
 )
