@@ -247,16 +247,6 @@ class MainWindow:
         self.proofread_btn.pack(side=tk.LEFT, padx=(0, 5))
         ToolTip(self.proofread_btn, "元の言語を維持したまま文法・スペルを修正")
 
-        # 入れ替えボタン
-        self.swap_btn = ttk.Button(
-            left_control,
-            text="⇄ 入れ替え",
-            command=self._on_swap_languages,
-            width=12
-        )
-        self.swap_btn.pack(side=tk.LEFT)
-        ToolTip(self.swap_btn, "翻訳元と翻訳結果を入れ替える")
-
         # 左側テキストエリア
         source_frame = ttk.Frame(left_frame)
         source_frame.pack(fill=tk.BOTH, expand=True)
@@ -291,9 +281,19 @@ class MainWindow:
         right_frame = ttk.Frame(self.paned_window)
         self.paned_window.add(right_frame, weight=1)
 
-        # 右側コントロール（コピーボタン）
+        # 右側コントロール（入れ替えボタン・コピーボタン）
         right_control = ttk.Frame(right_frame)
         right_control.pack(fill=tk.X, pady=(0, 5))
+
+        # 入れ替えボタン
+        self.swap_btn = ttk.Button(
+            right_control,
+            text="⇄ 入れ替え",
+            command=self._on_swap_languages,
+            width=12
+        )
+        self.swap_btn.pack(side=tk.LEFT, padx=(0, 5))
+        ToolTip(self.swap_btn, "翻訳元と翻訳結果を入れ替える")
 
         self.copy_result_btn = ttk.Button(
             right_control,
