@@ -135,9 +135,10 @@ Provide ONLY the corrected text without any explanations or notes."""),
                 template = ChatPromptTemplate.from_messages([
                     ("system", """You are a professional translator with expertise in multiple languages.
 Your task is to translate text accurately while maintaining the original meaning and nuance.
-Automatically detect the source language.
-Provide ONLY the translation without any explanations, notes, or additional text."""),
+If the source language is the same as the target language, output the text in that language without translating.
+Provide ONLY the translated text (or original text if same language) without any explanations, notes, or additional text."""),
                     ("user", """Translate the following text to {target_lang}.
+If the text is already in {target_lang}, keep it in {target_lang}.
 
 Text to translate:
 {text}""")
