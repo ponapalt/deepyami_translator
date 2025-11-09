@@ -34,7 +34,7 @@ class MainWindow:
         self.translation_service = None
 
         # ウィンドウの設定
-        self.root.title("DeepYami翻訳アプリ")
+        self.root.title("DeepYami翻訳アプリ - Tcl/TkとLLMを使った翻訳ツール")
         self.root.geometry("1000x600")
 
         # メニューバーの作成
@@ -55,10 +55,17 @@ class MainWindow:
         menubar = tk.Menu(self.root)
         self.root.config(menu=menubar)
 
-        # ファイルメニュー
-        file_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="ファイル", menu=file_menu)
-        file_menu.add_command(label="終了", command=self._on_exit)
+        # 編集メニュー
+        edit_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="編集", menu=edit_menu)
+        edit_menu.add_command(label="元に戻す", command=self._on_undo, accelerator="Ctrl+Z")
+        edit_menu.add_command(label="やり直し", command=self._on_redo, accelerator="Ctrl+Y")
+        edit_menu.add_separator()
+        edit_menu.add_command(label="切り取り", command=self._on_cut, accelerator="Ctrl+X")
+        edit_menu.add_command(label="コピー", command=self._on_copy, accelerator="Ctrl+C")
+        edit_menu.add_command(label="貼り付け", command=self._on_paste, accelerator="Ctrl+V")
+        edit_menu.add_separator()
+        edit_menu.add_command(label="すべて選択", command=self._on_select_all, accelerator="Ctrl+A")
 
         # 設定メニュー
         settings_menu = tk.Menu(menubar, tearoff=0)
@@ -69,6 +76,14 @@ class MainWindow:
         help_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="ヘルプ", menu=help_menu)
         help_menu.add_command(label="バージョン情報", command=self._on_about)
+
+        # キーボードショートカット
+        self.root.bind('<Control-z>', lambda e: self._on_undo())
+        self.root.bind('<Control-y>', lambda e: self._on_redo())
+        self.root.bind('<Control-x>', lambda e: self._on_cut())
+        self.root.bind('<Control-c>', lambda e: self._on_copy())
+        self.root.bind('<Control-v>', lambda e: self._on_paste())
+        self.root.bind('<Control-a>', lambda e: self._on_select_all())
 
     def _create_widgets(self):
         """UI要素を作成"""
@@ -94,33 +109,6 @@ class MainWindow:
         )
         warning_btn.pack(side=tk.RIGHT, padx=20, pady=10)
 
-        # コントロールフレーム
-        self.control_frame = ttk.Frame(self.root, padding="10")
-        self.control_frame.pack(fill=tk.X)
-
-        # 翻訳先言語選択
-        lang_frame = ttk.Frame(self.control_frame)
-        lang_frame.pack(side=tk.LEFT, padx=5)
-        ttk.Label(lang_frame, text="翻訳先:").pack(side=tk.LEFT, padx=(0, 5))
-        self.target_lang_var = tk.StringVar()
-        self.target_lang_combo = ttk.Combobox(
-            lang_frame,
-            textvariable=self.target_lang_var,
-            values=self.LANGUAGES,
-            state="readonly",
-            width=20
-        )
-        self.target_lang_combo.pack(side=tk.LEFT)
-
-        # 翻訳ボタン
-        self.translate_btn = ttk.Button(
-            self.control_frame,
-            text="翻訳 →",
-            command=self._on_translate,
-            width=15
-        )
-        self.translate_btn.pack(side=tk.LEFT, padx=20)
-
         # PanedWindowで左右分割（自動リサイズ対応）
         paned_window = ttk.PanedWindow(self.root, orient=tk.HORIZONTAL)
         paned_window.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
@@ -129,8 +117,35 @@ class MainWindow:
         left_frame = ttk.Frame(paned_window)
         paned_window.add(left_frame, weight=1)
 
-        ttk.Label(left_frame, text="翻訳元テキスト").pack(anchor=tk.W, pady=(0, 5))
+        # 左側ヘッダー
+        left_header = ttk.Frame(left_frame)
+        left_header.pack(fill=tk.X, pady=(0, 5))
+        ttk.Label(left_header, text="翻訳元テキスト", font=('Arial', 10, 'bold')).pack(side=tk.LEFT)
 
+        # 左側コントロール（翻訳先言語と翻訳ボタン）
+        left_control = ttk.Frame(left_frame)
+        left_control.pack(fill=tk.X, pady=(0, 5))
+
+        ttk.Label(left_control, text="翻訳先:").pack(side=tk.LEFT, padx=(0, 5))
+        self.target_lang_var = tk.StringVar()
+        self.target_lang_combo = ttk.Combobox(
+            left_control,
+            textvariable=self.target_lang_var,
+            values=self.LANGUAGES,
+            state="readonly",
+            width=20
+        )
+        self.target_lang_combo.pack(side=tk.LEFT, padx=(0, 10))
+
+        self.translate_btn = ttk.Button(
+            left_control,
+            text="翻訳 →",
+            command=self._on_translate,
+            width=15
+        )
+        self.translate_btn.pack(side=tk.LEFT)
+
+        # 左側テキストエリア
         source_frame = ttk.Frame(left_frame)
         source_frame.pack(fill=tk.BOTH, expand=True)
 
@@ -151,8 +166,24 @@ class MainWindow:
         right_frame = ttk.Frame(paned_window)
         paned_window.add(right_frame, weight=1)
 
-        ttk.Label(right_frame, text="翻訳結果").pack(anchor=tk.W, pady=(0, 5))
+        # 右側ヘッダー
+        right_header = ttk.Frame(right_frame)
+        right_header.pack(fill=tk.X, pady=(0, 5))
+        ttk.Label(right_header, text="翻訳結果", font=('Arial', 10, 'bold')).pack(side=tk.LEFT)
 
+        # 右側コントロール（コピーボタン）
+        right_control = ttk.Frame(right_frame)
+        right_control.pack(fill=tk.X, pady=(0, 5))
+
+        self.copy_result_btn = ttk.Button(
+            right_control,
+            text="翻訳結果をコピー",
+            command=self._on_copy_result,
+            width=20
+        )
+        self.copy_result_btn.pack(side=tk.LEFT)
+
+        # 右側テキストエリア
         target_frame = ttk.Frame(right_frame)
         target_frame.pack(fill=tk.BOTH, expand=True)
 
@@ -192,13 +223,15 @@ class MainWindow:
             self.source_text.config(state=tk.NORMAL)
             self.translate_btn.config(state=tk.NORMAL)
             self.target_lang_combo.config(state="readonly")
+            self.copy_result_btn.config(state=tk.NORMAL)
             self.status_bar.config(text="準備完了")
         else:
             # 設定未完了時: 警告バナーを表示、コントロールを無効化
-            self.warning_frame.pack(fill=tk.X, before=self.control_frame)
+            self.warning_frame.pack(fill=tk.X, side=tk.TOP, before=self.root.winfo_children()[1])
             self.source_text.config(state=tk.DISABLED)
             self.translate_btn.config(state=tk.DISABLED)
             self.target_lang_combo.config(state=tk.DISABLED)
+            self.copy_result_btn.config(state=tk.DISABLED)
             self.status_bar.config(text="API設定が必要です")
 
     def _initialize_translation_service(self):
@@ -273,9 +306,59 @@ class MainWindow:
         self.status_bar.config(text="翻訳エラー")
         self.translate_btn.config(state=tk.NORMAL)
 
-    def _on_exit(self):
-        """終了"""
-        self.root.quit()
+    def _on_copy_result(self):
+        """翻訳結果をクリップボードにコピー"""
+        result = self.target_text.get("1.0", tk.END).strip()
+        if result:
+            self.root.clipboard_clear()
+            self.root.clipboard_append(result)
+            self.status_bar.config(text="翻訳結果をコピーしました")
+        else:
+            messagebox.showwarning("警告", "コピーする翻訳結果がありません。")
+
+    def _on_undo(self):
+        """元に戻す"""
+        try:
+            self.source_text.edit_undo()
+        except tk.TclError:
+            pass
+
+    def _on_redo(self):
+        """やり直し"""
+        try:
+            self.source_text.edit_redo()
+        except tk.TclError:
+            pass
+
+    def _on_cut(self):
+        """切り取り"""
+        try:
+            self.source_text.event_generate("<<Cut>>")
+        except tk.TclError:
+            pass
+
+    def _on_copy(self):
+        """コピー"""
+        try:
+            self.source_text.event_generate("<<Copy>>")
+        except tk.TclError:
+            pass
+
+    def _on_paste(self):
+        """貼り付け"""
+        try:
+            self.source_text.event_generate("<<Paste>>")
+        except tk.TclError:
+            pass
+
+    def _on_select_all(self):
+        """すべて選択"""
+        try:
+            self.source_text.tag_add(tk.SEL, "1.0", tk.END)
+            self.source_text.mark_set(tk.INSERT, "1.0")
+            self.source_text.see(tk.INSERT)
+        except tk.TclError:
+            pass
 
     def _on_settings(self):
         """設定ダイアログを開く"""
