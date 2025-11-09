@@ -463,27 +463,35 @@ class MainWindow:
         self.proofread_btn.config(state=tk.NORMAL)
         self.cancel_btn.config(state=tk.DISABLED)
 
-    def _on_translate(self):
-        """翻訳ボタンクリック時の処理"""
+    def _on_translate(self, auto_mode=False):
+        """翻訳ボタンクリック時の処理
+
+        Args:
+            auto_mode: 自動翻訳モードの場合True（警告ダイアログを表示しない）
+        """
         if not self.translation_service:
-            messagebox.showerror("エラー", "翻訳サービスが初期化されていません。")
+            if not auto_mode:
+                messagebox.showerror("エラー", "翻訳サービスが初期化されていません。")
             return
 
         source_text = self.source_text.get("1.0", tk.END).strip()
         if not source_text:
-            messagebox.showwarning("警告", "翻訳するテキストを入力してください。")
+            if not auto_mode:
+                messagebox.showwarning("警告", "翻訳するテキストを入力してください。")
             return
 
         target_lang = self.target_lang_var.get()
 
         if not target_lang:
-            messagebox.showwarning("警告", "翻訳先の言語を選択してください。")
+            if not auto_mode:
+                messagebox.showwarning("警告", "翻訳先の言語を選択してください。")
             return
 
         style = self.style_var.get()
 
         if not style:
-            messagebox.showwarning("警告", "翻訳スタイルを選択してください。")
+            if not auto_mode:
+                messagebox.showwarning("警告", "翻訳スタイルを選択してください。")
             return
 
         # 既存のタスクを中断
@@ -756,9 +764,14 @@ class MainWindow:
     def _auto_translate(self):
         """2秒間の無操作後に自動翻訳を実行"""
         source_text = self.source_text.get("1.0", tk.END).strip()
-        if source_text and self.target_lang_var.get():
+        target_lang = self.target_lang_var.get()
+        style = self.style_var.get()
+
+        # 必要な条件がすべて揃っている場合のみ自動翻訳を実行
+        if source_text and target_lang and style and self.translation_service:
             # 既存のタスクがあれば中断してから新しい翻訳を開始
-            self._on_translate()
+            # auto_mode=Trueで警告ダイアログを表示しない
+            self._on_translate(auto_mode=True)
 
     def _on_exit(self):
         """アプリケーションを終了"""
