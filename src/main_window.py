@@ -11,6 +11,40 @@ from src.settings_dialog import SettingsDialog
 from src.llm_service import TranslationService
 
 
+class ToolTip:
+    """ツールチップを表示するクラス"""
+
+    def __init__(self, widget, text):
+        self.widget = widget
+        self.text = text
+        self.tooltip_window = None
+        self.widget.bind('<Enter>', self.show_tooltip)
+        self.widget.bind('<Leave>', self.hide_tooltip)
+
+    def show_tooltip(self, event=None):
+        """ツールチップを表示"""
+        if self.tooltip_window or not self.text:
+            return
+
+        x = self.widget.winfo_rootx() + 20
+        y = self.widget.winfo_rooty() + self.widget.winfo_height() + 5
+
+        self.tooltip_window = tw = tk.Toplevel(self.widget)
+        tw.wm_overrideredirect(True)
+        tw.wm_geometry(f"+{x}+{y}")
+
+        label = tk.Label(tw, text=self.text, justify=tk.LEFT,
+                        background="#ffffe0", relief=tk.SOLID, borderwidth=1,
+                        font=("Arial", 9))
+        label.pack()
+
+    def hide_tooltip(self, event=None):
+        """ツールチップを非表示"""
+        if self.tooltip_window:
+            self.tooltip_window.destroy()
+            self.tooltip_window = None
+
+
 class MainWindow:
     """メインウィンドウクラス"""
 
@@ -133,11 +167,6 @@ class MainWindow:
         left_frame = ttk.Frame(self.paned_window)
         self.paned_window.add(left_frame, weight=1)
 
-        # 左側ヘッダー
-        left_header = ttk.Frame(left_frame)
-        left_header.pack(fill=tk.X, pady=(0, 5))
-        ttk.Label(left_header, text="翻訳元テキスト", font=('Arial', 10, 'bold')).pack(side=tk.LEFT)
-
         # 左側コントロール（翻訳先言語、スタイル、ボタン）
         left_control = ttk.Frame(left_frame)
         left_control.pack(fill=tk.X, pady=(0, 5))
@@ -214,6 +243,9 @@ class MainWindow:
         self.source_text.bind('<App>', self._show_source_context_menu)  # コンテキストメニューキー
         self.source_text.bind('<Control-F10>', self._show_source_context_menu)  # Ctrl+F10
 
+        # ツールチップを追加
+        ToolTip(self.source_text, "翻訳元テキスト")
+
         # スクロールバー（自動表示/非表示）
         self.source_scrollbar = ttk.Scrollbar(source_frame, command=self.source_text.yview)
         self.source_scrollbar_visible = False
@@ -222,11 +254,6 @@ class MainWindow:
         # 右側: 翻訳結果テキスト
         right_frame = ttk.Frame(self.paned_window)
         self.paned_window.add(right_frame, weight=1)
-
-        # 右側ヘッダー
-        right_header = ttk.Frame(right_frame)
-        right_header.pack(fill=tk.X, pady=(0, 5))
-        ttk.Label(right_header, text="翻訳結果", font=('Arial', 10, 'bold')).pack(side=tk.LEFT)
 
         # 右側コントロール（コピーボタン）
         right_control = ttk.Frame(right_frame)
@@ -248,15 +275,28 @@ class MainWindow:
             target_frame,
             wrap=tk.WORD,
             font=('Arial', 11),
-            state=tk.DISABLED,
             bg="#f5f5f5"
         )
         self.target_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # 編集を防ぐために、キー入力をブロック（ただしコピー系のショートカットは許可）
+        def block_edit(event):
+            # Ctrl+C, Ctrl+A などのショートカットは許可
+            if event.state & 0x4:  # Control キーが押されている
+                if event.keysym in ('c', 'C', 'a', 'A', 'Insert'):
+                    return None  # イベントを通す
+            # その他のキー入力は全てブロック
+            return "break"
+
+        self.target_text.bind('<Key>', block_edit)
 
         # コンテキストメニューのバインディング
         self.target_text.bind('<Button-3>', self._show_target_context_menu)  # 右クリック
         self.target_text.bind('<App>', self._show_target_context_menu)  # コンテキストメニューキー
         self.target_text.bind('<Control-F10>', self._show_target_context_menu)  # Ctrl+F10
+
+        # ツールチップを追加
+        ToolTip(self.target_text, "翻訳結果")
 
         # スクロールバー（自動表示/非表示）
         self.target_scrollbar = ttk.Scrollbar(target_frame, command=self.target_text.yview)
@@ -368,10 +408,8 @@ class MainWindow:
     def _show_translation_result(self, result: str):
         """翻訳結果を表示"""
         if result:
-            self.target_text.config(state=tk.NORMAL)
             self.target_text.delete("1.0", tk.END)
             self.target_text.insert("1.0", result)
-            self.target_text.config(state=tk.DISABLED)
             self.status_bar.config(text="翻訳完了")
         else:
             messagebox.showerror("エラー", "翻訳に失敗しました。")
@@ -540,9 +578,7 @@ class MainWindow:
                 self.source_text.insert("1.0", source_text)
 
             if target_text:
-                self.target_text.config(state=tk.NORMAL)
                 self.target_text.insert("1.0", target_text)
-                self.target_text.config(state=tk.DISABLED)
 
             # イベントバインディングを再設定
             self.source_text.bind('<KeyRelease>', self._on_text_change)
@@ -737,11 +773,9 @@ class MainWindow:
         if target_text:
             self.source_text.insert("1.0", target_text)
 
-        self.target_text.config(state=tk.NORMAL)
         self.target_text.delete("1.0", tk.END)
         if source_text:
             self.target_text.insert("1.0", source_text)
-        self.target_text.config(state=tk.DISABLED)
 
         # 新しい翻訳元テキスト（元の翻訳結果）から言語を推定
         if target_text:
