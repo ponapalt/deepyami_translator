@@ -178,7 +178,9 @@ Text to translate:
                         else:
                             token = str(chunk)
                         full_response += token
-                        streaming_callback(token)
+                        # コールバックがFalseを返したら中断
+                        if streaming_callback(token) is False:
+                            return None
                     return full_response.strip()
                 else:
                     # 非ストリーミングモード
@@ -203,7 +205,9 @@ Text to translate:
                         else:
                             token = str(chunk)
                         full_response += token
-                        streaming_callback(token)
+                        # コールバックがFalseを返したら中断
+                        if streaming_callback(token) is False:
+                            return None
                     return full_response.strip()
                 else:
                     # 非ストリーミングモード（既存の動作）
@@ -263,7 +267,9 @@ Provide ONLY the corrected text without any explanations or notes."""),
                         else:
                             token = str(chunk)
                         full_response += token
-                        streaming_callback(token)
+                        # コールバックがFalseを返したら中断
+                        if streaming_callback(token) is False:
+                            return None
                     return full_response.strip()
                 else:
                     # 非ストリーミングモード
@@ -286,7 +292,9 @@ Provide ONLY the corrected text without any explanations or notes."""),
                         else:
                             token = str(chunk)
                         full_response += token
-                        streaming_callback(token)
+                        # コールバックがFalseを返したら中断
+                        if streaming_callback(token) is False:
+                            return None
                     return full_response.strip()
                 else:
                     # 非ストリーミングモード（既存の動作）

@@ -114,6 +114,8 @@ class MainWindow:
         self.config_manager = config_manager
         self.translation_service = None
         self.debounce_timer = None  # 自動翻訳用タイマー
+        self.current_thread = None  # 現在実行中の翻訳/校正スレッド
+        self.cancel_flag = False  # 翻訳/校正中断フラグ
 
         # ウィンドウの設定
         self.root.title("DeepYami翻訳アプリ - Tcl/TkとLLMを使った翻訳ツール")
@@ -263,6 +265,17 @@ class MainWindow:
         self.proofread_btn.pack(side=tk.LEFT, padx=(0, 5))
         ToolTip(self.proofread_btn, "元の言語を維持したまま文法・スペルを修正")
 
+        # 中止ボタン
+        self.cancel_btn = ttk.Button(
+            left_control,
+            text="中止",
+            command=self._on_cancel_translation,
+            width=10,
+            state=tk.DISABLED
+        )
+        self.cancel_btn.pack(side=tk.LEFT, padx=(0, 5))
+        ToolTip(self.cancel_btn, "翻訳・校正を中止")
+
         # 左側テキストエリア
         source_frame = ttk.Frame(left_frame)
         source_frame.pack(fill=tk.BOTH, expand=True)
@@ -395,6 +408,7 @@ class MainWindow:
             self.target_lang_combo.config(state="readonly")
             self.style_combo.config(state="readonly")
             self.copy_result_btn.config(state=tk.NORMAL)
+            # 中止ボタンは処理中のみ有効
             self.status_bar.config(text="準備完了")
         else:
             # 設定未完了時: 警告バナーを表示、コントロールを無効化
@@ -402,6 +416,7 @@ class MainWindow:
             self.source_text.config(state=tk.DISABLED)
             self.translate_btn.config(state=tk.DISABLED)
             self.proofread_btn.config(state=tk.DISABLED)
+            self.cancel_btn.config(state=tk.DISABLED)
             self.swap_btn.config(state=tk.DISABLED)
             self.target_lang_combo.config(state=tk.DISABLED)
             self.style_combo.config(state=tk.DISABLED)
@@ -432,6 +447,22 @@ class MainWindow:
         else:
             self.current_model_label.config(text="モデル: 未設定")
 
+    def _cancel_current_task(self):
+        """現在実行中の翻訳/校正タスクを中断"""
+        if self.current_thread and self.current_thread.is_alive():
+            self.cancel_flag = True
+            # スレッドの終了を待つ（最大1秒）
+            self.current_thread.join(timeout=1.0)
+            self.current_thread = None
+
+    def _on_cancel_translation(self):
+        """中止ボタンクリック時の処理"""
+        self._cancel_current_task()
+        self.status_bar.config(text="処理を中止しました")
+        self.translate_btn.config(state=tk.NORMAL)
+        self.proofread_btn.config(state=tk.NORMAL)
+        self.cancel_btn.config(state=tk.DISABLED)
+
     def _on_translate(self):
         """翻訳ボタンクリック時の処理"""
         if not self.translation_service:
@@ -455,6 +486,9 @@ class MainWindow:
             messagebox.showwarning("警告", "翻訳スタイルを選択してください。")
             return
 
+        # 既存のタスクを中断
+        self._cancel_current_task()
+
         # 言語設定とスタイルを保存（翻訳元は自動検出なので空文字列）
         self.config_manager.set_last_languages("", target_lang)
         self.config_manager.set_translation_style(style)
@@ -467,11 +501,17 @@ class MainWindow:
         self.status_bar.config(text="翻訳中...")
         self.translate_btn.config(state=tk.DISABLED)
         self.proofread_btn.config(state=tk.DISABLED)
+        self.cancel_btn.config(state=tk.NORMAL)
+        self.cancel_flag = False
 
         def streaming_callback(token: str):
             """ストリーミング時に各トークンをUIに追加"""
+            # 中断フラグをチェック
+            if self.cancel_flag:
+                return False  # 中断を通知
             # UIスレッドで安全に実行
             self.root.after(0, lambda t=token: self.target_text.insert(tk.END, t))
+            return True
 
         def translate_thread():
             try:
@@ -482,12 +522,19 @@ class MainWindow:
                     streaming_callback=streaming_callback
                 )
 
+                # 中断された場合
+                if self.cancel_flag:
+                    self.root.after(0, lambda: self._on_translation_cancelled())
+                    return
+
                 # UIスレッドで完了処理
                 self.root.after(0, lambda: self._on_translation_complete(result))
             except Exception as e:
-                self.root.after(0, lambda: self._show_translation_error(str(e)))
+                if not self.cancel_flag:
+                    self.root.after(0, lambda: self._show_translation_error(str(e)))
 
-        threading.Thread(target=translate_thread, daemon=True).start()
+        self.current_thread = threading.Thread(target=translate_thread, daemon=True)
+        self.current_thread.start()
 
     def _on_translation_complete(self, result: str):
         """翻訳完了時の処理"""
@@ -499,6 +546,16 @@ class MainWindow:
 
         self.translate_btn.config(state=tk.NORMAL)
         self.proofread_btn.config(state=tk.NORMAL)
+        self.cancel_btn.config(state=tk.DISABLED)
+        self.current_thread = None
+
+    def _on_translation_cancelled(self):
+        """翻訳中止時の処理"""
+        self.status_bar.config(text="翻訳を中止しました")
+        self.translate_btn.config(state=tk.NORMAL)
+        self.proofread_btn.config(state=tk.NORMAL)
+        self.cancel_btn.config(state=tk.DISABLED)
+        self.current_thread = None
 
     def _show_translation_result(self, result: str):
         """翻訳結果を表示（非ストリーミング用・後方互換性のため保持）"""
@@ -519,6 +576,8 @@ class MainWindow:
         self.status_bar.config(text="翻訳エラー")
         self.translate_btn.config(state=tk.NORMAL)
         self.proofread_btn.config(state=tk.NORMAL)
+        self.cancel_btn.config(state=tk.DISABLED)
+        self.current_thread = None
 
     def _on_proofread(self):
         """校正ボタンクリック時の処理"""
@@ -537,6 +596,9 @@ class MainWindow:
             messagebox.showwarning("警告", "翻訳スタイルを選択してください。")
             return
 
+        # 既存のタスクを中断
+        self._cancel_current_task()
+
         # 校正元テキストを保存（ストリーミング表示用）
         original_text = source_text
 
@@ -547,11 +609,17 @@ class MainWindow:
         self.status_bar.config(text="校正中...")
         self.translate_btn.config(state=tk.DISABLED)
         self.proofread_btn.config(state=tk.DISABLED)
+        self.cancel_btn.config(state=tk.NORMAL)
+        self.cancel_flag = False
 
         def streaming_callback(token: str):
             """ストリーミング時に各トークンをUIに追加"""
+            # 中断フラグをチェック
+            if self.cancel_flag:
+                return False  # 中断を通知
             # UIスレッドで安全に実行
             self.root.after(0, lambda t=token: self.source_text.insert(tk.END, t))
+            return True
 
         def proofread_thread():
             try:
@@ -561,12 +629,19 @@ class MainWindow:
                     streaming_callback=streaming_callback
                 )
 
+                # 中断された場合
+                if self.cancel_flag:
+                    self.root.after(0, lambda: self._on_proofread_cancelled())
+                    return
+
                 # UIスレッドで完了処理
                 self.root.after(0, lambda: self._on_proofread_complete(result))
             except Exception as e:
-                self.root.after(0, lambda: self._show_proofread_error(str(e)))
+                if not self.cancel_flag:
+                    self.root.after(0, lambda: self._show_proofread_error(str(e)))
 
-        threading.Thread(target=proofread_thread, daemon=True).start()
+        self.current_thread = threading.Thread(target=proofread_thread, daemon=True)
+        self.current_thread.start()
 
     def _on_proofread_complete(self, result: str):
         """校正完了時の処理"""
@@ -578,6 +653,16 @@ class MainWindow:
 
         self.translate_btn.config(state=tk.NORMAL)
         self.proofread_btn.config(state=tk.NORMAL)
+        self.cancel_btn.config(state=tk.DISABLED)
+        self.current_thread = None
+
+    def _on_proofread_cancelled(self):
+        """校正中止時の処理"""
+        self.status_bar.config(text="校正を中止しました")
+        self.translate_btn.config(state=tk.NORMAL)
+        self.proofread_btn.config(state=tk.NORMAL)
+        self.cancel_btn.config(state=tk.DISABLED)
+        self.current_thread = None
 
     def _show_proofread_result(self, result: str):
         """校正結果を表示（非ストリーミング用・後方互換性のため保持）"""
@@ -598,6 +683,8 @@ class MainWindow:
         self.status_bar.config(text="校正エラー")
         self.translate_btn.config(state=tk.NORMAL)
         self.proofread_btn.config(state=tk.NORMAL)
+        self.cancel_btn.config(state=tk.DISABLED)
+        self.current_thread = None
 
     def _on_copy_result(self):
         """翻訳結果をクリップボードにコピー"""
@@ -670,6 +757,7 @@ class MainWindow:
         """2秒間の無操作後に自動翻訳を実行"""
         source_text = self.source_text.get("1.0", tk.END).strip()
         if source_text and self.target_lang_var.get():
+            # 既存のタスクがあれば中断してから新しい翻訳を開始
             self._on_translate()
 
     def _on_exit(self):
