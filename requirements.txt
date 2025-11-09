@@ -8,9 +8,10 @@ langchain-anthropic>=1.0.0,<2.0.0
 langchain-google-genai>=3.0.0,<4.0.0
 
 # API Clients - latest stable versions
+# Note: openai and anthropic are needed for direct API access
+# google-generativeai is installed automatically by langchain-google-genai
 openai>=2.0.0,<3.0.0
 anthropic>=0.70.0,<1.0.0
-google-generativeai>=0.8.0,<1.0.0
 
 # Utilities
 python-dotenv>=1.0.0,<2.0.0
