@@ -91,11 +91,8 @@ class MainWindow:
         help_menu.add_command(label="バージョン情報", command=self._on_about)
 
         # キーボードショートカット
-        self.root.bind('<Control-z>', lambda e: self._on_undo())
-        self.root.bind('<Control-y>', lambda e: self._on_redo())
-        self.root.bind('<Control-x>', lambda e: self._on_cut())
-        self.root.bind('<Control-c>', lambda e: self._on_copy())
-        self.root.bind('<Control-v>', lambda e: self._on_paste())
+        # Ctrl+A以外はTextウィジェットのデフォルト動作を使用
+        # Ctrl+Aのみカスタム実装（全選択）
         self.root.bind('<Control-a>', lambda e: self._on_select_all())
 
     def _create_widgets(self):
@@ -461,6 +458,7 @@ class MainWindow:
             self.source_text.see(tk.INSERT)
         except tk.TclError:
             pass
+        return "break"  # イベントの伝播を停止
 
     def _on_text_change(self, event=None):
         """テキスト変更時にdebounceタイマーをリセット"""
