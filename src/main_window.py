@@ -423,28 +423,48 @@ class MainWindow:
         self.config_manager.set_translation_style(style)
         self.config_manager.save()
 
+        # 翻訳結果エリアをクリア
+        self.target_text.delete("1.0", tk.END)
+
         # 翻訳処理を別スレッドで実行
         self.status_bar.config(text="翻訳中...")
         self.translate_btn.config(state=tk.DISABLED)
         self.proofread_btn.config(state=tk.DISABLED)
+
+        def streaming_callback(token: str):
+            """ストリーミング時に各トークンをUIに追加"""
+            # UIスレッドで安全に実行
+            self.root.after(0, lambda t=token: self.target_text.insert(tk.END, t))
 
         def translate_thread():
             try:
                 result = self.translation_service.translate(
                     source_text,
                     target_lang,
-                    style
+                    style,
+                    streaming_callback=streaming_callback
                 )
 
-                # UIスレッドで結果を表示
-                self.root.after(0, lambda: self._show_translation_result(result))
+                # UIスレッドで完了処理
+                self.root.after(0, lambda: self._on_translation_complete(result))
             except Exception as e:
                 self.root.after(0, lambda: self._show_translation_error(str(e)))
 
         threading.Thread(target=translate_thread, daemon=True).start()
 
+    def _on_translation_complete(self, result: str):
+        """翻訳完了時の処理"""
+        if result:
+            self.status_bar.config(text="翻訳完了")
+        else:
+            messagebox.showerror("エラー", "翻訳に失敗しました。")
+            self.status_bar.config(text="翻訳エラー")
+
+        self.translate_btn.config(state=tk.NORMAL)
+        self.proofread_btn.config(state=tk.NORMAL)
+
     def _show_translation_result(self, result: str):
-        """翻訳結果を表示"""
+        """翻訳結果を表示（非ストリーミング用・後方互換性のため保持）"""
         if result:
             self.target_text.delete("1.0", tk.END)
             self.target_text.insert("1.0", result)
@@ -480,24 +500,50 @@ class MainWindow:
             messagebox.showwarning("警告", "翻訳スタイルを選択してください。")
             return
 
+        # 校正元テキストを保存（ストリーミング表示用）
+        original_text = source_text
+
+        # テキストエリアをクリア
+        self.source_text.delete("1.0", tk.END)
+
         # 校正処理を別スレッドで実行
         self.status_bar.config(text="校正中...")
         self.translate_btn.config(state=tk.DISABLED)
         self.proofread_btn.config(state=tk.DISABLED)
 
+        def streaming_callback(token: str):
+            """ストリーミング時に各トークンをUIに追加"""
+            # UIスレッドで安全に実行
+            self.root.after(0, lambda t=token: self.source_text.insert(tk.END, t))
+
         def proofread_thread():
             try:
-                result = self.translation_service.proofread(source_text, style)
+                result = self.translation_service.proofread(
+                    original_text,
+                    style,
+                    streaming_callback=streaming_callback
+                )
 
-                # UIスレッドで結果を表示
-                self.root.after(0, lambda: self._show_proofread_result(result))
+                # UIスレッドで完了処理
+                self.root.after(0, lambda: self._on_proofread_complete(result))
             except Exception as e:
                 self.root.after(0, lambda: self._show_proofread_error(str(e)))
 
         threading.Thread(target=proofread_thread, daemon=True).start()
 
+    def _on_proofread_complete(self, result: str):
+        """校正完了時の処理"""
+        if result:
+            self.status_bar.config(text="校正完了")
+        else:
+            messagebox.showerror("エラー", "校正に失敗しました。")
+            self.status_bar.config(text="校正エラー")
+
+        self.translate_btn.config(state=tk.NORMAL)
+        self.proofread_btn.config(state=tk.NORMAL)
+
     def _show_proofread_result(self, result: str):
-        """校正結果を表示"""
+        """校正結果を表示（非ストリーミング用・後方互換性のため保持）"""
         if result:
             self.source_text.delete("1.0", tk.END)
             self.source_text.insert("1.0", result)

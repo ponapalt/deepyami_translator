@@ -3,7 +3,7 @@ LLM統合サービスモジュール
 LangChainを使用して各LLMプロバイダーと統合
 """
 
-from typing import Optional
+from typing import Optional, Callable, Iterator
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
@@ -105,7 +105,8 @@ Provide ONLY the corrected text without any explanations or notes."""),
         else:
             raise ValueError(f"サポートされていないモデルタイプ: {self.model_type}")
 
-    def translate(self, text: str, target_lang: str, style: str = "ビジネス") -> Optional[str]:
+    def translate(self, text: str, target_lang: str, style: str = "ビジネス",
+                  streaming_callback: Optional[Callable[[str], None]] = None) -> Optional[str]:
         """
         テキストを翻訳（自動言語検出）
 
@@ -113,6 +114,7 @@ Provide ONLY the corrected text without any explanations or notes."""),
             text: 翻訳対象テキスト
             target_lang: 翻訳先言語（LANGUAGE_MAPのキー）
             style: 翻訳スタイル（"ビジネス", "標準", "友人"）
+            streaming_callback: ストリーミング時に各トークンを受け取るコールバック関数
 
         Returns:
             翻訳されたテキスト、エラーの場合はNone
@@ -140,32 +142,69 @@ Provide ONLY the translation without any explanations, notes, or additional text
 Text to translate:
 {text}""")
                 ])
-                chain = template | self.llm | self.output_parser
-                result = chain.invoke({
-                    "target_lang": target_lang_name,
-                    "text": text
-                })
-            else:
-                # チェーンを実行
-                result = self.translation_chain.invoke({
-                    "target_lang": target_lang_name,
-                    "text": text,
-                    "style_instruction": style_instruction
-                })
+                chain = template | self.llm
 
-            return result.strip()
+                # ストリーミングモードの場合
+                if streaming_callback:
+                    full_response = ""
+                    for chunk in chain.stream({
+                        "target_lang": target_lang_name,
+                        "text": text
+                    }):
+                        if hasattr(chunk, 'content'):
+                            token = chunk.content
+                        else:
+                            token = str(chunk)
+                        full_response += token
+                        streaming_callback(token)
+                    return full_response.strip()
+                else:
+                    # 非ストリーミングモード
+                    chain = chain | self.output_parser
+                    result = chain.invoke({
+                        "target_lang": target_lang_name,
+                        "text": text
+                    })
+                    return result.strip()
+            else:
+                # ストリーミングモードの場合
+                if streaming_callback:
+                    chain = self.translation_template | self.llm
+                    full_response = ""
+                    for chunk in chain.stream({
+                        "target_lang": target_lang_name,
+                        "text": text,
+                        "style_instruction": style_instruction
+                    }):
+                        if hasattr(chunk, 'content'):
+                            token = chunk.content
+                        else:
+                            token = str(chunk)
+                        full_response += token
+                        streaming_callback(token)
+                    return full_response.strip()
+                else:
+                    # 非ストリーミングモード（既存の動作）
+                    result = self.translation_chain.invoke({
+                        "target_lang": target_lang_name,
+                        "text": text,
+                        "style_instruction": style_instruction
+                    })
+                    return result.strip()
 
         except Exception as e:
             print(f"翻訳エラー: {e}")
             return None
 
-    def proofread(self, text: str, style: str = "ビジネス") -> Optional[str]:
+    def proofread(self, text: str, style: str = "ビジネス",
+                  streaming_callback: Optional[Callable[[str], None]] = None) -> Optional[str]:
         """
         テキストを校正（言語は維持）
 
         Args:
             text: 校正対象テキスト
             style: 翻訳スタイル（"ビジネス", "標準", "友人"）
+            streaming_callback: ストリーミング時に各トークンを受け取るコールバック関数
 
         Returns:
             校正されたテキスト、エラーの場合はNone
@@ -189,18 +228,51 @@ Provide ONLY the corrected text without any explanations or notes."""),
 
 {text}""")
                 ])
-                chain = template | self.llm | self.output_parser
-                result = chain.invoke({
-                    "text": text
-                })
-            else:
-                # チェーンを実行
-                result = self.proofreading_chain.invoke({
-                    "text": text,
-                    "style_instruction": style_instruction
-                })
+                chain = template | self.llm
 
-            return result.strip()
+                # ストリーミングモードの場合
+                if streaming_callback:
+                    full_response = ""
+                    for chunk in chain.stream({
+                        "text": text
+                    }):
+                        if hasattr(chunk, 'content'):
+                            token = chunk.content
+                        else:
+                            token = str(chunk)
+                        full_response += token
+                        streaming_callback(token)
+                    return full_response.strip()
+                else:
+                    # 非ストリーミングモード
+                    chain = chain | self.output_parser
+                    result = chain.invoke({
+                        "text": text
+                    })
+                    return result.strip()
+            else:
+                # ストリーミングモードの場合
+                if streaming_callback:
+                    chain = self.proofreading_template | self.llm
+                    full_response = ""
+                    for chunk in chain.stream({
+                        "text": text,
+                        "style_instruction": style_instruction
+                    }):
+                        if hasattr(chunk, 'content'):
+                            token = chunk.content
+                        else:
+                            token = str(chunk)
+                        full_response += token
+                        streaming_callback(token)
+                    return full_response.strip()
+                else:
+                    # 非ストリーミングモード（既存の動作）
+                    result = self.proofreading_chain.invoke({
+                        "text": text,
+                        "style_instruction": style_instruction
+                    })
+                    return result.strip()
 
         except Exception as e:
             print(f"校正エラー: {e}")
