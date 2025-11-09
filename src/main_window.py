@@ -23,6 +23,13 @@ class MainWindow:
         "English"
     ]
 
+    # 翻訳スタイルリスト
+    STYLES = [
+        "ビジネス",
+        "同僚",
+        "友人"
+    ]
+
     def __init__(self, root: tk.Tk, config_manager: ConfigManager):
         """
         Args:
@@ -128,10 +135,11 @@ class MainWindow:
         left_header.pack(fill=tk.X, pady=(0, 5))
         ttk.Label(left_header, text="翻訳元テキスト", font=('Arial', 10, 'bold')).pack(side=tk.LEFT)
 
-        # 左側コントロール（翻訳先言語と翻訳ボタン）
+        # 左側コントロール（翻訳先言語、スタイル、ボタン）
         left_control = ttk.Frame(left_frame)
         left_control.pack(fill=tk.X, pady=(0, 5))
 
+        # 翻訳先言語
         ttk.Label(left_control, text="翻訳先:").pack(side=tk.LEFT, padx=(0, 5))
         self.target_lang_var = tk.StringVar()
         self.target_lang_combo = ttk.Combobox(
@@ -139,17 +147,39 @@ class MainWindow:
             textvariable=self.target_lang_var,
             values=self.LANGUAGES,
             state="readonly",
-            width=20
+            width=18
         )
         self.target_lang_combo.pack(side=tk.LEFT, padx=(0, 10))
 
+        # 翻訳スタイル
+        ttk.Label(left_control, text="スタイル:").pack(side=tk.LEFT, padx=(0, 5))
+        self.style_var = tk.StringVar()
+        self.style_combo = ttk.Combobox(
+            left_control,
+            textvariable=self.style_var,
+            values=self.STYLES,
+            state="readonly",
+            width=10
+        )
+        self.style_combo.pack(side=tk.LEFT, padx=(0, 10))
+
+        # 翻訳ボタン
         self.translate_btn = ttk.Button(
             left_control,
             text="翻訳 →",
             command=self._on_translate,
-            width=15
+            width=10
         )
-        self.translate_btn.pack(side=tk.LEFT)
+        self.translate_btn.pack(side=tk.LEFT, padx=(0, 5))
+
+        # 校正ボタン
+        self.proofread_btn = ttk.Button(
+            left_control,
+            text="校正",
+            command=self._on_proofread,
+            width=10
+        )
+        self.proofread_btn.pack(side=tk.LEFT)
 
         # 左側テキストエリア
         source_frame = ttk.Frame(left_frame)
@@ -218,9 +248,10 @@ class MainWindow:
         )
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
 
-        # 最後に使用した言語を設定
+        # 最後に使用した言語とスタイルを設定
         _, target_lang = self.config_manager.get_last_languages()
         self.target_lang_var.set(target_lang)
+        self.style_var.set(self.config_manager.get_translation_style())
 
     def _update_ui_state(self):
         """UI状態を更新"""
@@ -231,7 +262,9 @@ class MainWindow:
             self.warning_frame.pack_forget()
             self.source_text.config(state=tk.NORMAL)
             self.translate_btn.config(state=tk.NORMAL)
+            self.proofread_btn.config(state=tk.NORMAL)
             self.target_lang_combo.config(state="readonly")
+            self.style_combo.config(state="readonly")
             self.copy_result_btn.config(state=tk.NORMAL)
             self.status_bar.config(text="準備完了")
         else:
@@ -239,7 +272,9 @@ class MainWindow:
             self.warning_frame.pack(fill=tk.X, side=tk.TOP, before=self.root.winfo_children()[1])
             self.source_text.config(state=tk.DISABLED)
             self.translate_btn.config(state=tk.DISABLED)
+            self.proofread_btn.config(state=tk.DISABLED)
             self.target_lang_combo.config(state=tk.DISABLED)
+            self.style_combo.config(state=tk.DISABLED)
             self.copy_result_btn.config(state=tk.DISABLED)
             self.status_bar.config(text="API設定が必要です")
 
@@ -273,19 +308,28 @@ class MainWindow:
             messagebox.showwarning("警告", "翻訳先の言語を選択してください。")
             return
 
-        # 言語設定を保存（翻訳元は自動検出なので空文字列）
+        style = self.style_var.get()
+
+        if not style:
+            messagebox.showwarning("警告", "翻訳スタイルを選択してください。")
+            return
+
+        # 言語設定とスタイルを保存（翻訳元は自動検出なので空文字列）
         self.config_manager.set_last_languages("", target_lang)
+        self.config_manager.set_translation_style(style)
         self.config_manager.save()
 
         # 翻訳処理を別スレッドで実行
         self.status_bar.config(text="翻訳中...")
         self.translate_btn.config(state=tk.DISABLED)
+        self.proofread_btn.config(state=tk.DISABLED)
 
         def translate_thread():
             try:
                 result = self.translation_service.translate(
                     source_text,
-                    target_lang
+                    target_lang,
+                    style
                 )
 
                 # UIスレッドで結果を表示
@@ -308,12 +352,61 @@ class MainWindow:
             self.status_bar.config(text="翻訳エラー")
 
         self.translate_btn.config(state=tk.NORMAL)
+        self.proofread_btn.config(state=tk.NORMAL)
 
     def _show_translation_error(self, error_msg: str):
         """翻訳エラーを表示"""
         messagebox.showerror("エラー", f"翻訳中にエラーが発生しました:\n{error_msg}")
         self.status_bar.config(text="翻訳エラー")
         self.translate_btn.config(state=tk.NORMAL)
+        self.proofread_btn.config(state=tk.NORMAL)
+
+    def _on_proofread(self):
+        """校正ボタンクリック時の処理"""
+        if not self.translation_service:
+            messagebox.showerror("エラー", "翻訳サービスが初期化されていません。")
+            return
+
+        source_text = self.source_text.get("1.0", tk.END).strip()
+        if not source_text:
+            messagebox.showwarning("警告", "校正するテキストを入力してください。")
+            return
+
+        # 校正処理を別スレッドで実行
+        self.status_bar.config(text="校正中...")
+        self.translate_btn.config(state=tk.DISABLED)
+        self.proofread_btn.config(state=tk.DISABLED)
+
+        def proofread_thread():
+            try:
+                result = self.translation_service.proofread(source_text)
+
+                # UIスレッドで結果を表示
+                self.root.after(0, lambda: self._show_proofread_result(result))
+            except Exception as e:
+                self.root.after(0, lambda: self._show_proofread_error(str(e)))
+
+        threading.Thread(target=proofread_thread, daemon=True).start()
+
+    def _show_proofread_result(self, result: str):
+        """校正結果を表示"""
+        if result:
+            self.source_text.delete("1.0", tk.END)
+            self.source_text.insert("1.0", result)
+            self.status_bar.config(text="校正完了")
+        else:
+            messagebox.showerror("エラー", "校正に失敗しました。")
+            self.status_bar.config(text="校正エラー")
+
+        self.translate_btn.config(state=tk.NORMAL)
+        self.proofread_btn.config(state=tk.NORMAL)
+
+    def _show_proofread_error(self, error_msg: str):
+        """校正エラーを表示"""
+        messagebox.showerror("エラー", f"校正中にエラーが発生しました:\n{error_msg}")
+        self.status_bar.config(text="校正エラー")
+        self.translate_btn.config(state=tk.NORMAL)
+        self.proofread_btn.config(state=tk.NORMAL)
 
     def _on_copy_result(self):
         """翻訳結果をクリップボードにコピー"""
@@ -375,8 +468,10 @@ class MainWindow:
         if self.debounce_timer:
             self.root.after_cancel(self.debounce_timer)
 
-        # 2秒後に自動翻訳を実行するタイマーをセット
-        if self.translation_service and self.config_manager.is_configured():
+        # 自動翻訳が有効な場合のみ、2秒後に自動翻訳を実行するタイマーをセット
+        if (self.translation_service and
+            self.config_manager.is_configured() and
+            self.config_manager.is_auto_translate_enabled()):
             self.debounce_timer = self.root.after(2000, self._auto_translate)
 
     def _auto_translate(self):

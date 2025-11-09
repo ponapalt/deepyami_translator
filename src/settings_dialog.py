@@ -131,6 +131,19 @@ class SettingsDialog:
         )
         self.google_show_btn.pack(side=tk.LEFT, padx=(5, 0))
 
+        # オプションフレーム
+        option_frame = ttk.LabelFrame(main_frame, text="オプション", padding="10")
+        option_frame.pack(fill=tk.X, pady=(0, 20))
+
+        # 自動翻訳ON/OFF
+        self.auto_translate_var = tk.BooleanVar()
+        auto_translate_cb = ttk.Checkbutton(
+            option_frame,
+            text="自動翻訳を有効にする（編集後2秒で自動的に翻訳）",
+            variable=self.auto_translate_var
+        )
+        auto_translate_cb.pack(anchor=tk.W)
+
         # ボタンフレーム
         button_frame = ttk.Frame(main_frame)
         button_frame.pack(fill=tk.X)
@@ -191,6 +204,9 @@ class SettingsDialog:
         self.anthropic_entry.insert(0, api_keys.get("anthropic", ""))
         self.google_entry.insert(0, api_keys.get("google", ""))
 
+        # 自動翻訳設定を読み込み
+        self.auto_translate_var.set(self.config_manager.is_auto_translate_enabled())
+
     def _on_save(self):
         """保存ボタンクリック時の処理"""
         model = self.model_var.get()
@@ -220,6 +236,7 @@ class SettingsDialog:
         self.config_manager.set_api_key("openai", openai_key)
         self.config_manager.set_api_key("anthropic", anthropic_key)
         self.config_manager.set_api_key("google", google_key)
+        self.config_manager.set_auto_translate_enabled(self.auto_translate_var.get())
 
         if self.config_manager.save():
             self.result = True

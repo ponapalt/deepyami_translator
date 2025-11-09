@@ -19,7 +19,9 @@ class ConfigManager:
             "google": ""
         },
         "last_source_lang": "Japanese",
-        "last_target_lang": "English"
+        "last_target_lang": "English",
+        "auto_translate_enabled": False,  # 自動翻訳のON/OFF
+        "translation_style": "ビジネス"  # 翻訳スタイル: "ビジネス", "同僚", "友人"
     }
 
     def __init__(self, config_path: str = "config.json"):
@@ -154,3 +156,40 @@ class ConfigManager:
         """
         self.config["last_source_lang"] = source_lang
         self.config["last_target_lang"] = target_lang
+
+    def is_auto_translate_enabled(self) -> bool:
+        """
+        自動翻訳が有効かどうかを取得
+
+        Returns:
+            自動翻訳の有効/無効
+        """
+        return self.config.get("auto_translate_enabled", False)
+
+    def set_auto_translate_enabled(self, enabled: bool) -> None:
+        """
+        自動翻訳の有効/無効を設定
+
+        Args:
+            enabled: 有効/無効
+        """
+        self.config["auto_translate_enabled"] = enabled
+
+    def get_translation_style(self) -> str:
+        """
+        翻訳スタイルを取得
+
+        Returns:
+            翻訳スタイル（"ビジネス", "同僚", "友人"）
+        """
+        return self.config.get("translation_style", "ビジネス")
+
+    def set_translation_style(self, style: str) -> None:
+        """
+        翻訳スタイルを設定
+
+        Args:
+            style: "ビジネス", "同僚", "友人"のいずれか
+        """
+        if style in ["ビジネス", "同僚", "友人"]:
+            self.config["translation_style"] = style
