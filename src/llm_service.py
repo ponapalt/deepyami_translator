@@ -23,7 +23,7 @@ class TranslationService:
     # 翻訳スタイルの説明
     STYLE_INSTRUCTIONS = {
         "ビジネス": "formal business tone with polite and professional language",
-        "同僚": "casual professional tone suitable for colleagues",
+        "標準": None,  # 標準の場合はスタイル指定なし
         "友人": "friendly and casual tone suitable for friends"
     }
 
@@ -112,7 +112,7 @@ Provide ONLY the corrected text without any explanations or notes."""),
         Args:
             text: 翻訳対象テキスト
             target_lang: 翻訳先言語（LANGUAGE_MAPのキー）
-            style: 翻訳スタイル（"ビジネス", "同僚", "友人"）
+            style: 翻訳スタイル（"ビジネス", "標準", "友人"）
 
         Returns:
             翻訳されたテキスト、エラーの場合はNone
@@ -127,12 +127,31 @@ Provide ONLY the corrected text without any explanations or notes."""),
             # スタイル指示を取得
             style_instruction = self.STYLE_INSTRUCTIONS.get(style, self.STYLE_INSTRUCTIONS["ビジネス"])
 
-            # チェーンを実行
-            result = self.translation_chain.invoke({
-                "target_lang": target_lang_name,
-                "text": text,
-                "style_instruction": style_instruction
-            })
+            # 標準の場合はスタイル指定なしのプロンプトを使用
+            if style_instruction is None:
+                # スタイル指定なしのプロンプトテンプレート
+                template = ChatPromptTemplate.from_messages([
+                    ("system", """You are a professional translator with expertise in multiple languages.
+Your task is to translate text accurately while maintaining the original meaning and nuance.
+Automatically detect the source language and translate to the target language.
+Provide ONLY the translation without any explanations, notes, or additional text."""),
+                    ("user", """Translate the following text to {target_lang}.
+
+Text to translate:
+{text}""")
+                ])
+                chain = template | self.llm | self.output_parser
+                result = chain.invoke({
+                    "target_lang": target_lang_name,
+                    "text": text
+                })
+            else:
+                # チェーンを実行
+                result = self.translation_chain.invoke({
+                    "target_lang": target_lang_name,
+                    "text": text,
+                    "style_instruction": style_instruction
+                })
 
             return result.strip()
 
@@ -146,7 +165,7 @@ Provide ONLY the corrected text without any explanations or notes."""),
 
         Args:
             text: 校正対象テキスト
-            style: 翻訳スタイル（"ビジネス", "同僚", "友人"）
+            style: 翻訳スタイル（"ビジネス", "標準", "友人"）
 
         Returns:
             校正されたテキスト、エラーの場合はNone
@@ -158,11 +177,28 @@ Provide ONLY the corrected text without any explanations or notes."""),
             # スタイル指示を取得
             style_instruction = self.STYLE_INSTRUCTIONS.get(style, self.STYLE_INSTRUCTIONS["ビジネス"])
 
-            # チェーンを実行
-            result = self.proofreading_chain.invoke({
-                "text": text,
-                "style_instruction": style_instruction
-            })
+            # 標準の場合はスタイル指定なしのプロンプトを使用
+            if style_instruction is None:
+                # スタイル指定なしのプロンプトテンプレート
+                template = ChatPromptTemplate.from_messages([
+                    ("system", """You are a professional proofreader and editor.
+Your task is to proofread and correct the text while maintaining the original language.
+Fix grammar, spelling, punctuation, and improve clarity where needed.
+Provide ONLY the corrected text without any explanations or notes."""),
+                    ("user", """Proofread and correct the following text in its original language:
+
+{text}""")
+                ])
+                chain = template | self.llm | self.output_parser
+                result = chain.invoke({
+                    "text": text
+                })
+            else:
+                # チェーンを実行
+                result = self.proofreading_chain.invoke({
+                    "text": text,
+                    "style_instruction": style_instruction
+                })
 
             return result.strip()
 

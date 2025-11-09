@@ -26,7 +26,7 @@ class MainWindow:
     # 翻訳スタイルリスト
     STYLES = [
         "ビジネス",
-        "同僚",
+        "標準",
         "友人"
     ]
 
@@ -209,9 +209,15 @@ class MainWindow:
         # テキスト変更時のイベントバインディング（自動翻訳用）
         self.source_text.bind('<KeyRelease>', self._on_text_change)
 
-        source_scrollbar = ttk.Scrollbar(source_frame, command=self.source_text.yview)
-        source_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        self.source_text.config(yscrollcommand=source_scrollbar.set)
+        # コンテキストメニューのバインディング
+        self.source_text.bind('<Button-3>', self._show_source_context_menu)  # 右クリック
+        self.source_text.bind('<App>', self._show_source_context_menu)  # コンテキストメニューキー
+        self.source_text.bind('<Control-F10>', self._show_source_context_menu)  # Ctrl+F10
+
+        # スクロールバー（自動表示/非表示）
+        self.source_scrollbar = ttk.Scrollbar(source_frame, command=self.source_text.yview)
+        self.source_scrollbar_visible = False
+        self.source_text.config(yscrollcommand=lambda *args: self._on_source_scroll(*args))
 
         # 右側: 翻訳結果テキスト
         right_frame = ttk.Frame(self.paned_window)
@@ -247,9 +253,15 @@ class MainWindow:
         )
         self.target_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        target_scrollbar = ttk.Scrollbar(target_frame, command=self.target_text.yview)
-        target_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        self.target_text.config(yscrollcommand=target_scrollbar.set)
+        # コンテキストメニューのバインディング
+        self.target_text.bind('<Button-3>', self._show_target_context_menu)  # 右クリック
+        self.target_text.bind('<App>', self._show_target_context_menu)  # コンテキストメニューキー
+        self.target_text.bind('<Control-F10>', self._show_target_context_menu)  # Ctrl+F10
+
+        # スクロールバー（自動表示/非表示）
+        self.target_scrollbar = ttk.Scrollbar(target_frame, command=self.target_text.yview)
+        self.target_scrollbar_visible = False
+        self.target_text.config(yscrollcommand=lambda *args: self._on_target_scroll(*args))
 
         # ステータスバー
         self.status_bar = ttk.Label(
@@ -628,6 +640,83 @@ class MainWindow:
 
         # デフォルトは英語
         return "English"
+
+    def _show_source_context_menu(self, event):
+        """翻訳元テキストエリアのコンテキストメニューを表示"""
+        context_menu = tk.Menu(self.root, tearoff=0)
+        context_menu.add_command(label="元に戻す", command=self._on_undo, accelerator="Ctrl+Z")
+        context_menu.add_command(label="やり直し", command=self._on_redo, accelerator="Ctrl+Y")
+        context_menu.add_separator()
+        context_menu.add_command(label="切り取り", command=self._on_cut, accelerator="Ctrl+X")
+        context_menu.add_command(label="コピー", command=self._on_copy, accelerator="Ctrl+C")
+        context_menu.add_command(label="貼り付け", command=self._on_paste, accelerator="Ctrl+V")
+        context_menu.add_separator()
+        context_menu.add_command(label="すべて選択", command=self._on_select_all, accelerator="Ctrl+A")
+
+        try:
+            context_menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            context_menu.grab_release()
+
+    def _show_target_context_menu(self, event):
+        """翻訳先テキストエリアのコンテキストメニューを表示"""
+        context_menu = tk.Menu(self.root, tearoff=0)
+        context_menu.add_command(label="すべて選択", command=self._on_select_all_target, accelerator="Ctrl+A")
+        context_menu.add_command(label="コピー", command=self._on_copy_target, accelerator="Ctrl+C")
+
+        try:
+            context_menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            context_menu.grab_release()
+
+    def _on_select_all_target(self):
+        """翻訳先テキストのすべて選択"""
+        try:
+            self.target_text.tag_add(tk.SEL, "1.0", tk.END)
+            self.target_text.mark_set(tk.INSERT, "1.0")
+            self.target_text.see(tk.INSERT)
+        except tk.TclError:
+            pass
+
+    def _on_copy_target(self):
+        """翻訳先テキストのコピー"""
+        try:
+            self.target_text.event_generate("<<Copy>>")
+        except tk.TclError:
+            pass
+
+    def _on_source_scroll(self, first, last):
+        """翻訳元テキストのスクロール時の処理（スクロールバーの自動表示/非表示）"""
+        self.source_scrollbar.set(first, last)
+
+        # スクロールバーが必要かどうかを判定
+        # first == '0.0' and last == '1.0' の場合、全体が表示されているのでスクロールバー不要
+        need_scrollbar = not (float(first) == 0.0 and float(last) == 1.0)
+
+        if need_scrollbar and not self.source_scrollbar_visible:
+            # スクロールバーを表示
+            self.source_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+            self.source_scrollbar_visible = True
+        elif not need_scrollbar and self.source_scrollbar_visible:
+            # スクロールバーを非表示
+            self.source_scrollbar.pack_forget()
+            self.source_scrollbar_visible = False
+
+    def _on_target_scroll(self, first, last):
+        """翻訳先テキストのスクロール時の処理（スクロールバーの自動表示/非表示）"""
+        self.target_scrollbar.set(first, last)
+
+        # スクロールバーが必要かどうかを判定
+        need_scrollbar = not (float(first) == 0.0 and float(last) == 1.0)
+
+        if need_scrollbar and not self.target_scrollbar_visible:
+            # スクロールバーを表示
+            self.target_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+            self.target_scrollbar_visible = True
+        elif not need_scrollbar and self.target_scrollbar_visible:
+            # スクロールバーを非表示
+            self.target_scrollbar.pack_forget()
+            self.target_scrollbar_visible = False
 
     def _on_swap_languages(self):
         """翻訳元と翻訳先のテキストを入れ替え、言語を自動推定"""
