@@ -7,7 +7,6 @@ echo DeepYami翻訳アプリ
 echo ========================================
 echo.
 
-REM Pythonの存在確認
 python --version >nul 2>&1
 if errorlevel 1 (
     echo [エラー] Pythonが見つかりません。
@@ -18,7 +17,6 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM venvの存在確認
 if not exist "venv\" (
     echo [1/3] 仮想環境を作成しています...
     python -m venv venv
@@ -34,7 +32,6 @@ if not exist "venv\" (
     echo.
 )
 
-REM venv有効化
 echo [2/3] 仮想環境を有効化しています...
 call venv\Scripts\activate.bat
 if errorlevel 1 (
@@ -44,7 +41,6 @@ if errorlevel 1 (
 )
 echo.
 
-REM 依存関係インストール
 echo [3/3] 依存関係をインストールしています...
 echo これには数分かかる場合があります...
 python -m pip install --upgrade pip >nul 2>&1
@@ -58,7 +54,6 @@ if errorlevel 1 (
 echo 依存関係をインストールしました。
 echo.
 
-REM アプリ起動
 echo ========================================
 echo アプリケーションを起動します...
 echo ========================================
