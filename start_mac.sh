@@ -16,6 +16,8 @@ then
     exit 1
 fi
 
+git pull
+
 # Check if venv exists
 if [ ! -d "venv" ]; then
     echo "[1/3] Creating virtual environment..."

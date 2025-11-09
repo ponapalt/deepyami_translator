@@ -16,6 +16,8 @@ if errorlevel 1 (
     exit /b 1
 )
 
+git pull
+
 if not exist "venv\" (
     echo [1/3] Creating virtual environment...
     python -m venv venv
