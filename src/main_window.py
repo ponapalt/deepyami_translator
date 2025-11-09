@@ -182,7 +182,16 @@ class MainWindow:
             command=self._on_proofread,
             width=10
         )
-        self.proofread_btn.pack(side=tk.LEFT)
+        self.proofread_btn.pack(side=tk.LEFT, padx=(0, 5))
+
+        # 入れ替えボタン
+        self.swap_btn = ttk.Button(
+            left_control,
+            text="⇄ 入れ替え",
+            command=self._on_swap_languages,
+            width=12
+        )
+        self.swap_btn.pack(side=tk.LEFT)
 
         # 左側テキストエリア
         source_frame = ttk.Frame(left_frame)
@@ -266,6 +275,7 @@ class MainWindow:
             self.source_text.config(state=tk.NORMAL)
             self.translate_btn.config(state=tk.NORMAL)
             self.proofread_btn.config(state=tk.NORMAL)
+            self.swap_btn.config(state=tk.NORMAL)
             self.target_lang_combo.config(state="readonly")
             self.style_combo.config(state="readonly")
             self.copy_result_btn.config(state=tk.NORMAL)
@@ -276,6 +286,7 @@ class MainWindow:
             self.source_text.config(state=tk.DISABLED)
             self.translate_btn.config(state=tk.DISABLED)
             self.proofread_btn.config(state=tk.DISABLED)
+            self.swap_btn.config(state=tk.DISABLED)
             self.target_lang_combo.config(state=tk.DISABLED)
             self.style_combo.config(state=tk.DISABLED)
             self.copy_result_btn.config(state=tk.DISABLED)
@@ -543,3 +554,121 @@ class MainWindow:
             "- Anthropic Claude Sonnet 4.5\n"
             "- Google Gemini 2.5 Pro"
         )
+
+    def _detect_language(self, text: str) -> str:
+        """
+        テキストから言語を推定（アルゴリズム的に判定、LLMは使用しない）
+
+        Args:
+            text: 判定するテキスト
+
+        Returns:
+            推定された言語名（LANGUAGES内の値）
+        """
+        if not text or not text.strip():
+            return "English"  # デフォルトは英語
+
+        # 文字種のカウント
+        hiragana_count = 0
+        katakana_count = 0
+        kanji_count = 0
+        hangul_count = 0
+        latin_count = 0
+        simplified_chinese_chars = 0
+        traditional_chinese_chars = 0
+
+        # 簡体字特有の文字例（一部）
+        simplified_chars = set('个们来国际现实认为')
+        # 繁体字特有の文字例（一部）
+        traditional_chars = set('個們來國際現實認為')
+
+        for char in text:
+            code_point = ord(char)
+
+            # ひらがな (U+3040-U+309F)
+            if 0x3040 <= code_point <= 0x309F:
+                hiragana_count += 1
+            # カタカナ (U+30A0-U+30FF)
+            elif 0x30A0 <= code_point <= 0x30FF:
+                katakana_count += 1
+            # ハングル (U+AC00-U+D7AF)
+            elif 0xAC00 <= code_point <= 0xD7AF or 0x1100 <= code_point <= 0x11FF:
+                hangul_count += 1
+            # CJK統合漢字 (U+4E00-U+9FFF)
+            elif 0x4E00 <= code_point <= 0x9FFF:
+                kanji_count += 1
+                # 簡体字・繁体字の判定
+                if char in simplified_chars:
+                    simplified_chinese_chars += 1
+                elif char in traditional_chars:
+                    traditional_chinese_chars += 1
+            # ラテン文字 (U+0041-U+005A, U+0061-U+007A)
+            elif (0x0041 <= code_point <= 0x005A) or (0x0061 <= code_point <= 0x007A):
+                latin_count += 1
+
+        # 日本語判定: ひらがなまたはカタカナが含まれる
+        if hiragana_count > 0 or katakana_count > 0:
+            return "Japanese"
+
+        # 韓国語判定: ハングルが含まれる
+        if hangul_count > 0:
+            return "Korean"
+
+        # 中国語判定: 漢字が含まれるが日本語文字は含まれない
+        if kanji_count > 0:
+            # 簡体字と繁体字の判定
+            if traditional_chinese_chars > simplified_chinese_chars:
+                return "Chinese-Traditional"
+            else:
+                return "Chinese-Simplified"
+
+        # 英語判定: 主にラテン文字
+        if latin_count > 0:
+            return "English"
+
+        # デフォルトは英語
+        return "English"
+
+    def _on_swap_languages(self):
+        """翻訳元と翻訳先のテキストを入れ替え、言語を自動推定"""
+        # 翻訳元テキストと翻訳結果テキストを取得
+        source_text = self.source_text.get("1.0", tk.END).strip()
+        target_text = self.target_text.get("1.0", tk.END).strip()
+
+        # 両方が空の場合は何もしない
+        if not source_text and not target_text:
+            messagebox.showwarning("警告", "入れ替えるテキストがありません。")
+            return
+
+        # テキスト変更イベントを一時的に解除（自動翻訳を防ぐ）
+        self.source_text.unbind('<KeyRelease>')
+
+        # テキストを入れ替え
+        self.source_text.delete("1.0", tk.END)
+        if target_text:
+            self.source_text.insert("1.0", target_text)
+
+        self.target_text.config(state=tk.NORMAL)
+        self.target_text.delete("1.0", tk.END)
+        if source_text:
+            self.target_text.insert("1.0", source_text)
+        self.target_text.config(state=tk.DISABLED)
+
+        # 新しい翻訳元テキスト（元の翻訳結果）から言語を推定
+        if target_text:
+            detected_lang = self._detect_language(target_text)
+
+            # 検出された言語を除く他の言語を翻訳先として設定
+            # （同じ言語に翻訳しても意味がないため）
+            available_langs = [lang for lang in self.LANGUAGES if lang != detected_lang]
+            if available_langs:
+                # デフォルトで英語を選択、なければリストの最初
+                if "English" in available_langs and detected_lang != "English":
+                    self.target_lang_var.set("English")
+                else:
+                    self.target_lang_var.set(available_langs[0])
+
+        # イベントバインディングを再設定
+        self.source_text.bind('<KeyRelease>', self._on_text_change)
+
+        self.status_bar.config(text="テキストを入れ替えました")
