@@ -75,7 +75,7 @@ class SettingsDialog:
             ("Claude Sonnet 4.5 (Anthropic)", "claude"),
             ("Claude Haiku 4.5 (Anthropic)", "claude-haiku"),
             ("Gemini 2.5 Pro (Google)", "gemini"),
-            ("Gemini Flash 2.5 (Google)", "gemini-flash")
+            ("Gemini 2.5 Flash (Google)", "gemini-flash")
         ]
 
         for text, value in models:

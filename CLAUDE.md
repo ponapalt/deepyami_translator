@@ -7,7 +7,7 @@ Python・LangChain・LLMを使用した、DeepL風の翻訳アプリケーショ
 ### 主要機能
 - 左右2分割のUI（左：翻訳元、右：翻訳先）
 - メニューバー付きのメモ帳風UI
-- 複数LLMモデル対応（GPT-4.1、GPT-4.1-mini、Claude Sonnet 4.5、Claude Haiku 4.5、Gemini 2.5 Pro、Gemini Flash 2.5）
+- 複数LLMモデル対応（GPT-4.1、GPT-4.1-mini、Claude Sonnet 4.5、Claude Haiku 4.5、Gemini 2.5 Pro、Gemini 2.5 Flash）
 - 多言語対応（日本語、中国語簡体字、中国語繁体字、韓国語、英語）
 - 翻訳スタイル選択（ビジネス、同僚、友人）
 - 自動校正機能（元の言語を維持したまま文法・スペルを修正）
@@ -86,12 +86,12 @@ deepyami_translator/
 
 **構成要素：**
 - LLMモデル選択
-  - ラジオボタン: GPT-4.1 / GPT-4.1-mini / Claude Sonnet 4.5 / Claude Haiku 4.5 / Gemini 2.5 Pro / Gemini Flash 2.5
+  - ラジオボタン: GPT-4.1 / GPT-4.1-mini / Claude Sonnet 4.5 / Claude Haiku 4.5 / Gemini 2.5 Pro / Gemini 2.5 Flash
 
 - APIキー入力
   - OpenAI APIキー（GPT-4.1/GPT-4.1-mini選択時に表示）
   - Anthropic APIキー（Claude Sonnet 4.5/Claude Haiku 4.5選択時に表示）
-  - Google APIキー（Gemini 2.5 Pro/Gemini Flash 2.5選択時に表示）
+  - Google APIキー（Gemini 2.5 Pro/Gemini 2.5 Flash選択時に表示）
   - 表示/非表示トグルボタン
 
 - オプション
@@ -140,7 +140,7 @@ deepyami_translator/
   - モデル名: "gemini-2.0-flash-exp"
   - model_type: "gemini"
 
-- Google Gemini Flash 2.5
+- Google Gemini 2.5 Flash
   - langchain-google-genai の ChatGoogleGenerativeAI
   - モデル名: "gemini-2.0-flash-exp"
   - model_type: "gemini-flash"
@@ -368,7 +368,7 @@ google-generativeai>=0.3.0
 - ✅ 初回起動時に設定ダイアログが表示
 - ✅ 設定完了後に翻訳機能が有効化
 - ✅ 5言語間の翻訳が正常動作
-- ✅ 6種類のLLMモデルが選択可能（GPT-4.1、GPT-4.1-mini、Claude Sonnet 4.5、Claude Haiku 4.5、Gemini 2.5 Pro、Gemini Flash 2.5）
+- ✅ 6種類のLLMモデルが選択可能（GPT-4.1、GPT-4.1-mini、Claude Sonnet 4.5、Claude Haiku 4.5、Gemini 2.5 Pro、Gemini 2.5 Flash）
 - ✅ 基本的なメモ帳機能（開く・保存）が動作
 - ✅ ウィンドウサイズが保存・復元される
 - ✅ 現在使用中のモデルが右ペインに表示される

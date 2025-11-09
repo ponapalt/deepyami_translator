@@ -101,7 +101,7 @@ class MainWindow:
         "claude": "Claude Sonnet 4.5",
         "claude-haiku": "Claude Haiku 4.5",
         "gemini": "Gemini 2.5 Pro",
-        "gemini-flash": "Gemini Flash 2.5"
+        "gemini-flash": "Gemini 2.5 Flash"
     }
 
     def __init__(self, root: tk.Tk, config_manager: ConfigManager):
@@ -831,7 +831,7 @@ class MainWindow:
             "- Anthropic Claude Sonnet 4.5\n"
             "- Anthropic Claude Haiku 4.5\n"
             "- Google Gemini 2.5 Pro\n"
-            "- Google Gemini Flash 2.5"
+            "- Google Gemini 2.5 Flash"
         )
 
     def _detect_language(self, text: str) -> str:
