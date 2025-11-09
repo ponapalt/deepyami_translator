@@ -24,7 +24,7 @@ class SettingsDialog:
         # ダイアログウィンドウの作成
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("API設定")
-        self.dialog.geometry("500x500")
+        self.dialog.geometry("500x650")
         self.dialog.resizable(False, False)
         self.dialog.transient(parent)
         self.dialog.grab_set()

@@ -7,12 +7,14 @@ Python・LangChain・LLMを使用した、DeepL風の翻訳アプリケーショ
 ### 主要機能
 - 左右2分割のUI（左：翻訳元、右：翻訳先）
 - メニューバー付きのメモ帳風UI
-- 複数LLMモデル対応（GPT-4.1、Claude Sonnet 4.5、Gemini 2.5 Pro）
+- 複数LLMモデル対応（GPT-4.1、GPT-4.1-mini、Claude Sonnet 4.5、Claude Haiku 4.5、Gemini 2.5 Pro、Gemini Flash 2.5）
 - 多言語対応（日本語、中国語簡体字、中国語繁体字、韓国語、英語）
 - 翻訳スタイル選択（ビジネス、同僚、友人）
 - 自動校正機能（元の言語を維持したまま文法・スペルを修正）
 - 自動翻訳機能（編集後2秒で自動翻訳、ON/OFF切替可能）
 - テキスト自動保存・復元（終了時に保存、起動時に復元）
+- ウィンドウサイズ保存・復元（終了時に保存、起動時に復元）
+- 現在使用中のモデル表示（右ペインのコピーボタン横に表示）
 - 設定管理（APIキー、LLMモデル選択、自動翻訳ON/OFF）
 - クロスプラットフォーム対応（Windows: start.bat、macOS/Linux: start.sh）
 
@@ -83,12 +85,12 @@ deepyami_translator/
 
 **構成要素：**
 - LLMモデル選択
-  - ラジオボタン: GPT-4.1 / Claude Sonnet 4.5 / Gemini 2.5 Pro
+  - ラジオボタン: GPT-4.1 / GPT-4.1-mini / Claude Sonnet 4.5 / Claude Haiku 4.5 / Gemini 2.5 Pro / Gemini Flash 2.5
 
 - APIキー入力
-  - OpenAI APIキー（GPT-4.1選択時に表示）
-  - Anthropic APIキー（Claude選択時に表示）
-  - Google APIキー（Gemini選択時に表示）
+  - OpenAI APIキー（GPT-4.1/GPT-4.1-mini選択時に表示）
+  - Anthropic APIキー（Claude Sonnet 4.5/Claude Haiku 4.5選択時に表示）
+  - Google APIキー（Gemini 2.5 Pro/Gemini Flash 2.5選択時に表示）
   - 表示/非表示トグルボタン
 
 - オプション
@@ -100,6 +102,13 @@ deepyami_translator/
 - APIキー形式チェック
 - 必須項目入力確認
 
+**重要な実装ガイドライン：**
+- ダイアログサイズ: 500x650（モデル選択肢が6つになったため十分な高さが必要）
+- モデル選択肢を追加・削除する場合は、ダイアログの高さを調整すること
+  - 1モデルあたり約25-30pxの高さが必要
+  - すべての要素（モデル選択、APIキー入力、オプション、ボタン）が画面内に収まることを確認
+  - 必要に応じてダイアログサイズを拡大する（例：モデルが8つなら700px程度）
+
 ### 2. LLM統合（llm_service.py）
 
 #### 2.1 LangChain統合
@@ -107,15 +116,33 @@ deepyami_translator/
 **対応モデル：**
 - OpenAI GPT-4.1
   - langchain-openai の ChatOpenAI
-  - モデル名: "gpt-4-turbo-preview" または最新のGPT-4.1
+  - モデル名: "gpt-4-turbo-preview"
+  - model_type: "gpt4"
+
+- OpenAI GPT-4.1-mini
+  - langchain-openai の ChatOpenAI
+  - モデル名: "gpt-4o-mini"
+  - model_type: "gpt4-mini"
 
 - Anthropic Claude Sonnet 4.5
   - langchain-anthropic の ChatAnthropic
-  - モデル名: "claude-sonnet-4-5-20250929"
+  - モデル名: "claude-sonnet-4-20250514"
+  - model_type: "claude"
+
+- Anthropic Claude Haiku 4.5
+  - langchain-anthropic の ChatAnthropic
+  - モデル名: "claude-3-5-haiku-20241022"
+  - model_type: "claude-haiku"
 
 - Google Gemini 2.5 Pro
   - langchain-google-genai の ChatGoogleGenerativeAI
-  - モデル名: "gemini-2.5-pro" または "gemini-2.0-flash"
+  - モデル名: "gemini-2.0-flash-exp"
+  - model_type: "gemini"
+
+- Google Gemini Flash 2.5
+  - langchain-google-genai の ChatGoogleGenerativeAI
+  - モデル名: "gemini-2.0-flash-exp"
+  - model_type: "gemini-flash"
 
 #### 2.2 翻訳プロンプト設計
 
@@ -139,7 +166,7 @@ class TranslationService:
     def __init__(self, model_type: str, api_key: str):
         """
         Args:
-            model_type: "gpt4", "claude", "gemini"
+            model_type: "gpt4", "gpt4-mini", "claude", "claude-haiku", "gemini", "gemini-flash"
             api_key: 対応するAPIキー
         """
 
@@ -170,7 +197,13 @@ class TranslationService:
         "google": ""
     },
     "last_source_lang": "Japanese",
-    "last_target_lang": "English"
+    "last_target_lang": "English",
+    "auto_translate_enabled": false,
+    "translation_style": "ビジネス",
+    "last_source_text": "",
+    "last_target_text": "",
+    "window_width": 1000,
+    "window_height": 600
 }
 ```
 
@@ -334,6 +367,8 @@ google-generativeai>=0.3.0
 - ✅ 初回起動時に設定ダイアログが表示
 - ✅ 設定完了後に翻訳機能が有効化
 - ✅ 5言語間の翻訳が正常動作
-- ✅ 3種類のLLMモデルが選択可能
+- ✅ 6種類のLLMモデルが選択可能（GPT-4.1、GPT-4.1-mini、Claude Sonnet 4.5、Claude Haiku 4.5、Gemini 2.5 Pro、Gemini Flash 2.5）
 - ✅ 基本的なメモ帳機能（開く・保存）が動作
+- ✅ ウィンドウサイズが保存・復元される
+- ✅ 現在使用中のモデルが右ペインに表示される
 - ✅ エラーが適切にハンドリングされる
