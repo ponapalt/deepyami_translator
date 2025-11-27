@@ -49,7 +49,10 @@ CRITICAL INSTRUCTIONS:
 - DO NOT include any prefixes like "Here's the translation:", "Translation:", or similar
 - DO NOT include any explanations, notes, or commentary
 - DO NOT include quotation marks around the translation
-- Start your response directly with the translated text"""),
+- Start your response directly with the translated text
+- PRESERVE ALL line breaks EXACTLY as they appear in the original text
+- Keep the same number of line breaks in the same positions
+- Maintain all paragraph separations and blank lines"""),
             ("user", """Translate the following text to {target_lang}.
 
 Text to translate:
@@ -68,7 +71,10 @@ CRITICAL INSTRUCTIONS:
 - DO NOT include any prefixes like "Here's the corrected text:", "Proofread version:", or similar
 - DO NOT include any explanations, notes, or commentary
 - DO NOT include quotation marks around the corrected text
-- Start your response directly with the corrected text"""),
+- Start your response directly with the corrected text
+- PRESERVE ALL line breaks EXACTLY as they appear in the original text
+- Keep the same number of line breaks in the same positions
+- Maintain all paragraph separations and blank lines"""),
             ("user", """Proofread and correct the following text in its original language:
 
 {text}""")
@@ -175,7 +181,10 @@ CRITICAL INSTRUCTIONS:
 - DO NOT include any prefixes like "Here's the translation:", "Translation:", or similar
 - DO NOT include any explanations, notes, or commentary
 - DO NOT include quotation marks around the translation
-- Start your response directly with the translated text"""),
+- Start your response directly with the translated text
+- PRESERVE ALL line breaks EXACTLY as they appear in the original text
+- Keep the same number of line breaks in the same positions
+- Maintain all paragraph separations and blank lines"""),
                     ("user", """Translate the following text to {target_lang}.
 If the text is already in {target_lang}, keep it in {target_lang}.
 
@@ -273,7 +282,10 @@ CRITICAL INSTRUCTIONS:
 - DO NOT include any prefixes like "Here's the corrected text:", "Proofread version:", or similar
 - DO NOT include any explanations, notes, or commentary
 - DO NOT include quotation marks around the corrected text
-- Start your response directly with the corrected text"""),
+- Start your response directly with the corrected text
+- PRESERVE ALL line breaks EXACTLY as they appear in the original text
+- Keep the same number of line breaks in the same positions
+- Maintain all paragraph separations and blank lines"""),
                     ("user", """Proofread and correct the following text in its original language:
 
 {text}""")
