@@ -6,12 +6,12 @@ LangChainと複数のLLMモデルを使用した、DeepL風の翻訳アプリケ
 
 - 🌐 **多言語対応**（日本語、中国語簡体字、中国語繁体字、韓国語、英語）
 - 🤖 **複数のLLMモデルに対応**
-  - OpenAI GPT-4.1
-  - OpenAI GPT-4.1-mini
+  - OpenAI GPT-5.2
+  - OpenAI GPT-5-mini
   - Anthropic Claude Sonnet 4.5
   - Anthropic Claude Haiku 4.5
-  - Google Gemini 2.5 Pro
-  - Google Gemini 2.5 Flash
+  - Google Gemini 3 Pro
+  - Google Gemini 3 Flash
 - 🎨 **翻訳スタイル選択**
   - ビジネス：フォーマルで丁寧な表現
   - 同僚：カジュアルプロフェッショナルな表現

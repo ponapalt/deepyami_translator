@@ -7,7 +7,7 @@ Python・LangChain・LLMを使用した、DeepL風の翻訳アプリケーショ
 ### 主要機能
 - 左右2分割のUI（左：翻訳元、右：翻訳先）
 - メニューバー付きのメモ帳風UI
-- 複数LLMモデル対応（GPT-4.1、GPT-4.1-mini、Claude Sonnet 4.5、Claude Haiku 4.5、Gemini 2.5 Pro、Gemini 2.5 Flash）
+- 複数LLMモデル対応（GPT-5.2、GPT-5-mini、Claude Sonnet 4.5、Claude Haiku 4.5、Gemini 3 Pro、Gemini 3 Flash）
 - 多言語対応（日本語、中国語簡体字、中国語繁体字、韓国語、英語）
 - 翻訳スタイル選択（ビジネス、同僚、友人）
 - 自動校正機能（元の言語を維持したまま文法・スペルを修正）
@@ -17,6 +17,7 @@ Python・LangChain・LLMを使用した、DeepL風の翻訳アプリケーショ
 - ウィンドウサイズ保存・復元（終了時に保存、起動時に復元）
 - 現在使用中のモデル表示（右ペインのコピーボタン横に表示）
 - 設定管理（APIキー、LLMモデル選択、自動翻訳ON/OFF）
+- プロンプトインジェクション対策（入力の安全性を確保）
 - クロスプラットフォーム対応（Windows: start.bat、macOS/Linux: start.sh）
 
 ## アーキテクチャ設計
@@ -86,12 +87,12 @@ deepyami_translator/
 
 **構成要素：**
 - LLMモデル選択
-  - ラジオボタン: GPT-4.1 / GPT-4.1-mini / Claude Sonnet 4.5 / Claude Haiku 4.5 / Gemini 2.5 Pro / Gemini 2.5 Flash
+  - ラジオボタン: GPT-5.2 / GPT-5-mini / Claude Sonnet 4.5 / Claude Haiku 4.5 / Gemini 3 Pro / Gemini 3 Flash
 
 - APIキー入力
-  - OpenAI APIキー（GPT-4.1/GPT-4.1-mini選択時に表示）
+  - OpenAI APIキー（GPT-5.2/GPT-5-mini選択時に表示）
   - Anthropic APIキー（Claude Sonnet 4.5/Claude Haiku 4.5選択時に表示）
-  - Google APIキー（Gemini 2.5 Pro/Gemini 2.5 Flash選択時に表示）
+  - Google APIキー（Gemini 3 Pro/Gemini 3 Flash選択時に表示）
   - 表示/非表示トグルボタン
 
 - オプション
@@ -139,11 +140,13 @@ deepyami_translator/
   - langchain-google-genai の ChatGoogleGenerativeAI
   - モデル名: "gemini-3-pro-preview"
   - model_type: "gemini"
+  - Gemini 3の返答形式に対応（リスト形式のレスポンス処理）
 
 - Google Gemini 3 Flash
   - langchain-google-genai の ChatGoogleGenerativeAI
   - モデル名: "gemini-3-flash-preview"
   - model_type: "gemini-flash"
+  - Gemini 3の返答形式に対応（リスト形式のレスポンス処理）
 
 #### 2.2 翻訳プロンプト設計
 
@@ -334,9 +337,9 @@ google-generativeai>=0.3.0
 - **GUI**: tkinter（Python標準ライブラリ）
 - **LLM統合**: LangChain
 - **API**:
-  - OpenAI API（GPT-4.1）
-  - Anthropic API（Claude）
-  - Google Generative AI API（Gemini）
+  - OpenAI API（GPT-5.2、GPT-5-mini）
+  - Anthropic API（Claude Sonnet 4.5、Claude Haiku 4.5）
+  - Google Generative AI API（Gemini 3 Pro、Gemini 3 Flash）
 
 ## セキュリティ考慮事項
 
@@ -348,7 +351,12 @@ google-generativeai>=0.3.0
    - テキスト長制限
    - 不正な入力の拒否
 
-3. エラーハンドリング
+3. プロンプトインジェクション対策
+   - システムプロンプトとユーザー入力の明確な分離
+   - 特殊な指示文の無効化
+   - 翻訳タスクの厳格な制限
+
+4. エラーハンドリング
    - API呼び出し失敗時の適切な処理
    - ユーザーへのフィードバック
 
@@ -368,9 +376,11 @@ google-generativeai>=0.3.0
 - ✅ 初回起動時に設定ダイアログが表示
 - ✅ 設定完了後に翻訳機能が有効化
 - ✅ 5言語間の翻訳が正常動作
-- ✅ 6種類のLLMモデルが選択可能（GPT-4.1、GPT-4.1-mini、Claude Sonnet 4.5、Claude Haiku 4.5、Gemini 2.5 Pro、Gemini 2.5 Flash）
+- ✅ 6種類のLLMモデルが選択可能（GPT-5.2、GPT-5-mini、Claude Sonnet 4.5、Claude Haiku 4.5、Gemini 3 Pro、Gemini 3 Flash）
 - ✅ 基本的なメモ帳機能（開く・保存）が動作
 - ✅ ウィンドウサイズが保存・復元される
 - ✅ 現在使用中のモデルが右ペインに表示される
 - ✅ 翻訳・校正のキャンセル機能が動作
+- ✅ プロンプトインジェクション対策が実装されている
+- ✅ Gemini 3の返答形式に対応している
 - ✅ エラーが適切にハンドリングされる
