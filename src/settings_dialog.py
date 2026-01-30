@@ -70,12 +70,12 @@ class SettingsDialog:
 
         self.model_var = tk.StringVar()
         models = [
-            ("GPT-4.1 (OpenAI)", "gpt4"),
-            ("GPT-4.1-mini (OpenAI)", "gpt4-mini"),
+            ("GPT-5.2 (OpenAI)", "gpt"),
+            ("GPT-5-mini (OpenAI)", "gpt-mini"),
             ("Claude Sonnet 4.5 (Anthropic)", "claude"),
             ("Claude Haiku 4.5 (Anthropic)", "claude-haiku"),
-            ("Gemini 2.5 Pro (Google)", "gemini"),
-            ("Gemini 2.5 Flash (Google)", "gemini-flash")
+            ("Gemini 3 Pro (Google)", "gemini"),
+            ("Gemini 3 Flash (Google)", "gemini-flash")
         ]
 
         for text, value in models:
@@ -187,7 +187,7 @@ class SettingsDialog:
         self.google_frame.pack_forget()
 
         # 選択されたモデルに対応するフレームを表示
-        if model in ["gpt4", "gpt4-mini"]:
+        if model in ["gpt", "gpt-mini"]:
             self.openai_frame.pack(fill=tk.X)
         elif model in ["claude", "claude-haiku"]:
             self.anthropic_frame.pack(fill=tk.X)
@@ -227,7 +227,7 @@ class SettingsDialog:
         google_key = self.google_entry.get().strip()
 
         # 選択されたモデルに対応するAPIキーが入力されているか確認
-        if model in ["gpt4", "gpt4-mini"] and not openai_key:
+        if model in ["gpt", "gpt-mini"] and not openai_key:
             messagebox.showerror("エラー", "OpenAI API Keyを入力してください。")
             return
         elif model in ["claude", "claude-haiku"] and not anthropic_key:

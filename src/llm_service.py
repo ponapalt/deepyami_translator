@@ -30,7 +30,7 @@ class TranslationService:
     def __init__(self, model_type: str, api_key: str):
         """
         Args:
-            model_type: "gpt4", "claude", "gemini"のいずれか
+            model_type: "gpt", "claude", "gemini"のいずれか
             api_key: 対応するAPIキー
         """
         self.model_type = model_type
@@ -99,45 +99,45 @@ CRITICAL INSTRUCTIONS:
         Raises:
             ValueError: サポートされていないモデルタイプの場合
         """
-        if self.model_type == "gpt4":
+        if self.model_type == "gpt":
             from langchain_openai import ChatOpenAI
             return ChatOpenAI(
-                model="gpt-4-turbo-preview",
+                model="gpt-5.2",
                 temperature=0.3,
                 api_key=self.api_key
             )
-        elif self.model_type == "gpt4-mini":
+        elif self.model_type == "gpt-mini":
             from langchain_openai import ChatOpenAI
             return ChatOpenAI(
-                model="gpt-4o-mini",
+                model="gpt-5-mini",
                 temperature=0.3,
                 api_key=self.api_key
             )
         elif self.model_type == "claude":
             from langchain_anthropic import ChatAnthropic
             return ChatAnthropic(
-                model="claude-sonnet-4-20250514",
+                model="claude-sonnet-4-5",
                 temperature=0.3,
                 api_key=self.api_key
             )
         elif self.model_type == "claude-haiku":
             from langchain_anthropic import ChatAnthropic
             return ChatAnthropic(
-                model="claude-3-5-haiku-20241022",
+                model="claude-haiku-4-5",
                 temperature=0.3,
                 api_key=self.api_key
             )
         elif self.model_type == "gemini":
             from langchain_google_genai import ChatGoogleGenerativeAI
             return ChatGoogleGenerativeAI(
-                model="gemini-2.0-flash-exp",
+                model="gemini-3-pro-preview",
                 temperature=0.3,
                 google_api_key=self.api_key
             )
         elif self.model_type == "gemini-flash":
             from langchain_google_genai import ChatGoogleGenerativeAI
             return ChatGoogleGenerativeAI(
-                model="gemini-2.0-flash-exp",
+                model="gemini-3-flash-preview",
                 temperature=0.3,
                 google_api_key=self.api_key
             )

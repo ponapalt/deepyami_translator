@@ -12,7 +12,7 @@ class ConfigManager:
     """設定ファイルの読み書きを管理するクラス"""
 
     DEFAULT_CONFIG = {
-        "model_type": "",  # "gpt4", "claude", "gemini"
+        "model_type": "",  # "gpt", "claude", "gemini"
         "api_keys": {
             "openai": "",
             "anthropic": "",
@@ -53,6 +53,13 @@ class ConfigManager:
                     # api_keysも個別にマージ
                     if "api_keys" in loaded_config:
                         config["api_keys"].update(loaded_config["api_keys"])
+
+                    # 後方互換性：古いモデル名を新しいモデル名に自動変換
+                    model_type = config.get("model_type", "")
+                    if model_type == "gpt4":
+                        config["model_type"] = "gpt"
+                        print("設定ファイルのモデル名を 'gpt4' から 'gpt' に自動変換しました")
+
                     return config
             except (json.JSONDecodeError, IOError) as e:
                 print(f"設定ファイルの読み込みに失敗しました: {e}")
@@ -89,7 +96,7 @@ class ConfigManager:
         api_keys = self.config.get("api_keys", {})
 
         # モデルに対応するAPIキーが設定されているかチェック
-        if model_type in ["gpt4", "gpt4-mini"]:
+        if model_type in ["gpt", "gpt-mini"]:
             return bool(api_keys.get("openai", "").strip())
         elif model_type in ["claude", "claude-haiku"]:
             return bool(api_keys.get("anthropic", "").strip())
@@ -108,7 +115,7 @@ class ConfigManager:
         model_type = self.config.get("model_type", "")
         api_keys = self.config.get("api_keys", {})
 
-        if model_type in ["gpt4", "gpt4-mini"]:
+        if model_type in ["gpt", "gpt-mini"]:
             return api_keys.get("openai", "").strip() or None
         elif model_type in ["claude", "claude-haiku"]:
             return api_keys.get("anthropic", "").strip() or None
@@ -122,9 +129,9 @@ class ConfigManager:
         使用するLLMモデルを設定
 
         Args:
-            model_type: "gpt4", "gpt4-mini", "claude", "claude-haiku", "gemini", "gemini-flash"のいずれか
+            model_type: "gpt", "gpt-mini", "claude", "claude-haiku", "gemini", "gemini-flash"のいずれか
         """
-        if model_type in ["gpt4", "gpt4-mini", "claude", "claude-haiku", "gemini", "gemini-flash"]:
+        if model_type in ["gpt", "gpt-mini", "claude", "claude-haiku", "gemini", "gemini-flash"]:
             self.config["model_type"] = model_type
 
     def set_api_key(self, provider: str, api_key: str) -> None:

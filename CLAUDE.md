@@ -115,34 +115,34 @@ deepyami_translator/
 #### 2.1 LangChain統合
 
 **対応モデル：**
-- OpenAI GPT-4.1
+- OpenAI GPT-5.2
   - langchain-openai の ChatOpenAI
-  - モデル名: "gpt-4-turbo-preview"
-  - model_type: "gpt4"
+  - モデル名: "gpt-5.2"
+  - model_type: "gpt"
 
-- OpenAI GPT-4.1-mini
+- OpenAI GPT-5-mini
   - langchain-openai の ChatOpenAI
-  - モデル名: "gpt-4o-mini"
-  - model_type: "gpt4-mini"
+  - モデル名: "gpt-5-mini"
+  - model_type: "gpt-mini"
 
 - Anthropic Claude Sonnet 4.5
   - langchain-anthropic の ChatAnthropic
-  - モデル名: "claude-sonnet-4-20250514"
+  - モデル名: "claude-sonnet-4-5"
   - model_type: "claude"
 
 - Anthropic Claude Haiku 4.5
   - langchain-anthropic の ChatAnthropic
-  - モデル名: "claude-3-5-haiku-20241022"
+  - モデル名: "claude-haiku-4-5"
   - model_type: "claude-haiku"
 
-- Google Gemini 2.5 Pro
+- Google Gemini 3 Pro
   - langchain-google-genai の ChatGoogleGenerativeAI
-  - モデル名: "gemini-2.0-flash-exp"
+  - モデル名: "gemini-3-pro-preview"
   - model_type: "gemini"
 
-- Google Gemini 2.5 Flash
+- Google Gemini 3 Flash
   - langchain-google-genai の ChatGoogleGenerativeAI
-  - モデル名: "gemini-2.0-flash-exp"
+  - モデル名: "gemini-3-flash-preview"
   - model_type: "gemini-flash"
 
 #### 2.2 翻訳プロンプト設計
@@ -167,7 +167,7 @@ class TranslationService:
     def __init__(self, model_type: str, api_key: str):
         """
         Args:
-            model_type: "gpt4", "gpt4-mini", "claude", "claude-haiku", "gemini", "gemini-flash"
+            model_type: "gpt", "gpt-mini", "claude", "claude-haiku", "gemini", "gemini-flash"
             api_key: 対応するAPIキー
         """
 
@@ -191,7 +191,7 @@ class TranslationService:
 
 ```json
 {
-    "model_type": "gpt4",
+    "model_type": "gpt",
     "api_keys": {
         "openai": "",
         "anthropic": "",
