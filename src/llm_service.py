@@ -3,9 +3,36 @@ LLM統合サービスモジュール
 LangChainを使用して各LLMプロバイダーと統合
 """
 
-from typing import Optional, Callable, Iterator
+from typing import Optional, Callable, Iterator, Union, List, Dict, Any
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+
+
+def extract_content_text(content: Union[str, List[Dict[str, Any]]]) -> str:
+    """
+    LLMレスポンスのcontentから実際のテキストを抽出
+
+    Args:
+        content: 文字列、またはリスト形式のcontent
+
+    Returns:
+        抽出されたテキスト
+    """
+    if isinstance(content, str):
+        # 文字列の場合はそのまま返す
+        return content
+    elif isinstance(content, list):
+        # リスト形式の場合、各要素からtextを抽出して結合
+        text_parts = []
+        for item in content:
+            if isinstance(item, dict) and 'text' in item:
+                text_parts.append(item['text'])
+            elif isinstance(item, dict) and 'type' in item and item['type'] == 'text' and 'text' in item:
+                text_parts.append(item['text'])
+        return ''.join(text_parts)
+    else:
+        # その他の場合は文字列に変換
+        return str(content)
 
 
 class TranslationService:
@@ -123,6 +150,7 @@ CRITICAL OUTPUT INSTRUCTIONS:
             return ChatOpenAI(
                 model="gpt-5.2",
                 temperature=0.3,
+                reasoning_effort="none",
                 api_key=self.api_key
             )
         elif self.model_type == "gpt-mini":
@@ -130,6 +158,7 @@ CRITICAL OUTPUT INSTRUCTIONS:
             return ChatOpenAI(
                 model="gpt-5-mini",
                 temperature=0.3,
+                reasoning_effort="low",
                 api_key=self.api_key
             )
         elif self.model_type == "claude":
@@ -151,6 +180,7 @@ CRITICAL OUTPUT INSTRUCTIONS:
             return ChatGoogleGenerativeAI(
                 model="gemini-3-pro-preview",
                 temperature=0.3,
+                thinking_level="low",
                 google_api_key=self.api_key
             )
         elif self.model_type == "gemini-flash":
@@ -158,6 +188,7 @@ CRITICAL OUTPUT INSTRUCTIONS:
             return ChatGoogleGenerativeAI(
                 model="gemini-3-flash-preview",
                 temperature=0.3,
+                thinking_level="low",
                 google_api_key=self.api_key
             )
         else:
@@ -229,7 +260,7 @@ If the text is already in {target_lang}, keep it in {target_lang}.
                         "text": text
                     }):
                         if hasattr(chunk, 'content'):
-                            token = chunk.content
+                            token = extract_content_text(chunk.content)
                         else:
                             token = str(chunk)
                         full_response += token
@@ -256,7 +287,7 @@ If the text is already in {target_lang}, keep it in {target_lang}.
                         "style_instruction": style_instruction
                     }):
                         if hasattr(chunk, 'content'):
-                            token = chunk.content
+                            token = extract_content_text(chunk.content)
                         else:
                             token = str(chunk)
                         full_response += token
@@ -337,7 +368,7 @@ CRITICAL OUTPUT INSTRUCTIONS:
                         "text": text
                     }):
                         if hasattr(chunk, 'content'):
-                            token = chunk.content
+                            token = extract_content_text(chunk.content)
                         else:
                             token = str(chunk)
                         full_response += token
@@ -362,7 +393,7 @@ CRITICAL OUTPUT INSTRUCTIONS:
                         "style_instruction": style_instruction
                     }):
                         if hasattr(chunk, 'content'):
-                            token = chunk.content
+                            token = extract_content_text(chunk.content)
                         else:
                             token = str(chunk)
                         full_response += token
