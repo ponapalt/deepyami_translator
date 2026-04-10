@@ -7,7 +7,7 @@ Python・LangChain・LLMを使用した、DeepL風の翻訳アプリケーショ
 ### 主要機能
 - 左右2分割のUI（左：翻訳元、右：翻訳先）
 - メニューバー付きのメモ帳風UI
-- 複数LLMモデル対応（GPT-5.2、GPT-5-mini、Claude Sonnet 4.5、Claude Haiku 4.5、Gemini 3 Pro、Gemini 3 Flash）
+- 複数LLMモデル対応（GPT-5.4、GPT-5.4-mini、Claude Sonnet 4.6、Claude Haiku 4.5、Gemini 3.1 Pro、Gemini 3 Flash）
 - 多言語対応（日本語、中国語簡体字、中国語繁体字、韓国語、英語）
 - 翻訳スタイル選択（ビジネス、同僚、友人）
 - 自動校正機能（元の言語を維持したまま文法・スペルを修正）
@@ -87,12 +87,12 @@ deepyami_translator/
 
 **構成要素：**
 - LLMモデル選択
-  - ラジオボタン: GPT-5.2 / GPT-5-mini / Claude Sonnet 4.5 / Claude Haiku 4.5 / Gemini 3 Pro / Gemini 3 Flash
+  - ラジオボタン: GPT-5.4 / GPT-5.4-mini / Claude Sonnet 4.6 / Claude Haiku 4.5 / Gemini 3.1 Pro / Gemini 3 Flash
 
 - APIキー入力
-  - OpenAI APIキー（GPT-5.2/GPT-5-mini選択時に表示）
-  - Anthropic APIキー（Claude Sonnet 4.5/Claude Haiku 4.5選択時に表示）
-  - Google APIキー（Gemini 3 Pro/Gemini 3 Flash選択時に表示）
+  - OpenAI APIキー（GPT-5.4/GPT-5.4-mini選択時に表示）
+  - Anthropic APIキー（Claude Sonnet 4.6/Claude Haiku 4.5選択時に表示）
+  - Google APIキー（Gemini 3.1 Pro/Gemini 3 Flash選択時に表示）
   - 表示/非表示トグルボタン
 
 - オプション
@@ -116,19 +116,19 @@ deepyami_translator/
 #### 2.1 LangChain統合
 
 **対応モデル：**
-- OpenAI GPT-5.2
+- OpenAI GPT-5.4
   - langchain-openai の ChatOpenAI
-  - モデル名: "gpt-5.2"
+  - モデル名: "gpt-5.4"
   - model_type: "gpt"
 
-- OpenAI GPT-5-mini
+- OpenAI GPT-5.4-mini
   - langchain-openai の ChatOpenAI
-  - モデル名: "gpt-5-mini"
+  - モデル名: "gpt-5.4-mini"
   - model_type: "gpt-mini"
 
-- Anthropic Claude Sonnet 4.5
+- Anthropic Claude Sonnet 4.6
   - langchain-anthropic の ChatAnthropic
-  - モデル名: "claude-sonnet-4-5"
+  - モデル名: "claude-sonnet-4-6"
   - model_type: "claude"
 
 - Anthropic Claude Haiku 4.5
@@ -136,9 +136,9 @@ deepyami_translator/
   - モデル名: "claude-haiku-4-5"
   - model_type: "claude-haiku"
 
-- Google Gemini 3 Pro
+- Google Gemini 3.1 Pro
   - langchain-google-genai の ChatGoogleGenerativeAI
-  - モデル名: "gemini-3-pro-preview"
+  - モデル名: "gemini-3.1-pro-preview"
   - model_type: "gemini"
   - Gemini 3の返答形式に対応（リスト形式のレスポンス処理）
 
@@ -337,9 +337,9 @@ google-generativeai>=0.3.0
 - **GUI**: tkinter（Python標準ライブラリ）
 - **LLM統合**: LangChain
 - **API**:
-  - OpenAI API（GPT-5.2、GPT-5-mini）
-  - Anthropic API（Claude Sonnet 4.5、Claude Haiku 4.5）
-  - Google Generative AI API（Gemini 3 Pro、Gemini 3 Flash）
+  - OpenAI API（GPT-5.4、GPT-5.4-mini）
+  - Anthropic API（Claude Sonnet 4.6、Claude Haiku 4.5）
+  - Google Generative AI API（Gemini 3.1 Pro、Gemini 3 Flash）
 
 ## セキュリティ考慮事項
 
@@ -376,7 +376,7 @@ google-generativeai>=0.3.0
 - ✅ 初回起動時に設定ダイアログが表示
 - ✅ 設定完了後に翻訳機能が有効化
 - ✅ 5言語間の翻訳が正常動作
-- ✅ 6種類のLLMモデルが選択可能（GPT-5.2、GPT-5-mini、Claude Sonnet 4.5、Claude Haiku 4.5、Gemini 3 Pro、Gemini 3 Flash）
+- ✅ 6種類のLLMモデルが選択可能（GPT-5.4、GPT-5.4-mini、Claude Sonnet 4.6、Claude Haiku 4.5、Gemini 3.1 Pro、Gemini 3 Flash）
 - ✅ 基本的なメモ帳機能（開く・保存）が動作
 - ✅ ウィンドウサイズが保存・復元される
 - ✅ 現在使用中のモデルが右ペインに表示される

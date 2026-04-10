@@ -70,11 +70,11 @@ class SettingsDialog:
 
         self.model_var = tk.StringVar()
         models = [
-            ("GPT-5.2 (OpenAI)", "gpt"),
-            ("GPT-5-mini (OpenAI)", "gpt-mini"),
-            ("Claude Sonnet 4.5 (Anthropic)", "claude"),
+            ("GPT-5.4 (OpenAI)", "gpt"),
+            ("GPT-5.4-mini (OpenAI)", "gpt-mini"),
+            ("Claude Sonnet 4.6 (Anthropic)", "claude"),
             ("Claude Haiku 4.5 (Anthropic)", "claude-haiku"),
-            ("Gemini 3 Pro (Google)", "gemini"),
+            ("Gemini 3.1 Pro (Google)", "gemini"),
             ("Gemini 3 Flash (Google)", "gemini-flash")
         ]
 
