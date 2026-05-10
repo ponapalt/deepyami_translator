@@ -70,7 +70,7 @@ class SettingsDialog:
 
         self.model_var = tk.StringVar()
         models = [
-            ("GPT-5.4 (OpenAI)", "gpt"),
+            ("GPT-5.5 (OpenAI)", "gpt"),
             ("GPT-5.4-mini (OpenAI)", "gpt-mini"),
             ("Claude Sonnet 4.6 (Anthropic)", "claude"),
             ("Claude Haiku 4.5 (Anthropic)", "claude-haiku"),

@@ -148,7 +148,7 @@ CRITICAL OUTPUT INSTRUCTIONS:
         if self.model_type == "gpt":
             from langchain_openai import ChatOpenAI
             return ChatOpenAI(
-                model="gpt-5.4",
+                model="gpt-5.5",
                 temperature=0.3,
                 reasoning_effort="none",
                 api_key=self.api_key

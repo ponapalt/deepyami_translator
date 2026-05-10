@@ -6,7 +6,7 @@ LangChainと複数のLLMモデルを使用した、DeepL風の翻訳アプリケ
 
 - 🌐 **多言語対応**（日本語、中国語簡体字、中国語繁体字、韓国語、英語）
 - 🤖 **複数のLLMモデルに対応**
-  - OpenAI GPT-5.4
+  - OpenAI GPT-5.5
   - OpenAI GPT-5.4-mini
   - Anthropic Claude Sonnet 4.6
   - Anthropic Claude Haiku 4.5

@@ -96,7 +96,7 @@ class MainWindow:
 
     # モデル名の表示マッピング
     MODEL_DISPLAY_NAMES = {
-        "gpt": "GPT-5.4",
+        "gpt": "GPT-5.5",
         "gpt-mini": "GPT-5.4-mini",
         "claude": "Claude Sonnet 4.6",
         "claude-haiku": "Claude Haiku 4.5",
