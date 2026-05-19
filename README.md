@@ -11,7 +11,7 @@ LangChainと複数のLLMモデルを使用した、DeepL風の翻訳アプリケ
   - Anthropic Claude Sonnet 4.6
   - Anthropic Claude Haiku 4.5
   - Google Gemini 3.1 Pro
-  - Google Gemini 3 Flash
+  - Google Gemini 3.5 Flash
 - 🎨 **翻訳スタイル選択**
   - ビジネス：フォーマルで丁寧な表現
   - 同僚：カジュアルプロフェッショナルな表現
