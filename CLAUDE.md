@@ -7,7 +7,7 @@ Python・LangChain・LLMを使用した、DeepL風の翻訳アプリケーショ
 ### 主要機能
 - 左右2分割のUI（左：翻訳元、右：翻訳先）
 - メニューバー付きのメモ帳風UI
-- 複数LLMモデル対応（GPT-5.5、GPT-5.4-mini、Claude Sonnet 4.6、Claude Haiku 4.5、Gemini 3.1 Pro、Gemini 3.5 Flash）
+- 複数LLMモデル対応（GPT-5.5、GPT-5.4-mini、Claude Sonnet 5、Claude Haiku 4.5、Gemini 3.1 Pro、Gemini 3.5 Flash）
 - 多言語対応（日本語、中国語簡体字、中国語繁体字、韓国語、英語）
 - 翻訳スタイル選択（ビジネス、同僚、友人）
 - 自動校正機能（元の言語を維持したまま文法・スペルを修正）
@@ -87,11 +87,11 @@ deepyami_translator/
 
 **構成要素：**
 - LLMモデル選択
-  - ラジオボタン: GPT-5.5 / GPT-5.4-mini / Claude Sonnet 4.6 / Claude Haiku 4.5 / Gemini 3.1 Pro / Gemini 3.5 Flash
+  - ラジオボタン: GPT-5.5 / GPT-5.4-mini / Claude Sonnet 5 / Claude Haiku 4.5 / Gemini 3.1 Pro / Gemini 3.5 Flash
 
 - APIキー入力
   - OpenAI APIキー（GPT-5.5/GPT-5.4-mini選択時に表示）
-  - Anthropic APIキー（Claude Sonnet 4.6/Claude Haiku 4.5選択時に表示）
+  - Anthropic APIキー（Claude Sonnet 5/Claude Haiku 4.5選択時に表示）
   - Google APIキー（Gemini 3.1 Pro/Gemini 3.5 Flash選択時に表示）
   - 表示/非表示トグルボタン
 
@@ -126,9 +126,9 @@ deepyami_translator/
   - モデル名: "gpt-5.4-mini"
   - model_type: "gpt-mini"
 
-- Anthropic Claude Sonnet 4.6
+- Anthropic Claude Sonnet 5
   - langchain-anthropic の ChatAnthropic
-  - モデル名: "claude-sonnet-4-6"
+  - モデル名: "claude-sonnet-5"
   - model_type: "claude"
 
 - Anthropic Claude Haiku 4.5
@@ -338,7 +338,7 @@ google-generativeai>=0.3.0
 - **LLM統合**: LangChain
 - **API**:
   - OpenAI API（GPT-5.5、GPT-5.4-mini）
-  - Anthropic API（Claude Sonnet 4.6、Claude Haiku 4.5）
+  - Anthropic API（Claude Sonnet 5、Claude Haiku 4.5）
   - Google Generative AI API（Gemini 3.1 Pro、Gemini 3.5 Flash）
 
 ## セキュリティ考慮事項
@@ -376,7 +376,7 @@ google-generativeai>=0.3.0
 - ✅ 初回起動時に設定ダイアログが表示
 - ✅ 設定完了後に翻訳機能が有効化
 - ✅ 5言語間の翻訳が正常動作
-- ✅ 6種類のLLMモデルが選択可能（GPT-5.5、GPT-5.4-mini、Claude Sonnet 4.6、Claude Haiku 4.5、Gemini 3.1 Pro、Gemini 3.5 Flash）
+- ✅ 6種類のLLMモデルが選択可能（GPT-5.5、GPT-5.4-mini、Claude Sonnet 5、Claude Haiku 4.5、Gemini 3.1 Pro、Gemini 3.5 Flash）
 - ✅ 基本的なメモ帳機能（開く・保存）が動作
 - ✅ ウィンドウサイズが保存・復元される
 - ✅ 現在使用中のモデルが右ペインに表示される

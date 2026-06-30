@@ -164,7 +164,7 @@ CRITICAL OUTPUT INSTRUCTIONS:
         elif self.model_type == "claude":
             from langchain_anthropic import ChatAnthropic
             return ChatAnthropic(
-                model="claude-sonnet-4-6",
+                model="claude-sonnet-5",
                 temperature=0.3,
                 api_key=self.api_key
             )

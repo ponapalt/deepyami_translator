@@ -8,7 +8,7 @@ LangChainと複数のLLMモデルを使用した、DeepL風の翻訳アプリケ
 - 🤖 **複数のLLMモデルに対応**
   - OpenAI GPT-5.5
   - OpenAI GPT-5.4-mini
-  - Anthropic Claude Sonnet 4.6
+  - Anthropic Claude Sonnet 5
   - Anthropic Claude Haiku 4.5
   - Google Gemini 3.1 Pro
   - Google Gemini 3.5 Flash

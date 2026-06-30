@@ -98,7 +98,7 @@ class MainWindow:
     MODEL_DISPLAY_NAMES = {
         "gpt": "GPT-5.5",
         "gpt-mini": "GPT-5.4-mini",
-        "claude": "Claude Sonnet 4.6",
+        "claude": "Claude Sonnet 5",
         "claude-haiku": "Claude Haiku 4.5",
         "gemini": "Gemini 3.1 Pro",
         "gemini-flash": "Gemini 3.5 Flash"
@@ -828,7 +828,7 @@ class MainWindow:
             "対応モデル:\n"
             "- OpenAI GPT-4.1\n"
             "- OpenAI GPT-4.1-mini\n"
-            "- Anthropic Claude Sonnet 4.6\n"
+            "- Anthropic Claude Sonnet 5\n"
             "- Anthropic Claude Haiku 4.5\n"
             "- Google Gemini 2.5 Pro\n"
             "- Google Gemini 2.5 Flash"

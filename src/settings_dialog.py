@@ -72,7 +72,7 @@ class SettingsDialog:
         models = [
             ("GPT-5.5 (OpenAI)", "gpt"),
             ("GPT-5.4-mini (OpenAI)", "gpt-mini"),
-            ("Claude Sonnet 4.6 (Anthropic)", "claude"),
+            ("Claude Sonnet 5 (Anthropic)", "claude"),
             ("Claude Haiku 4.5 (Anthropic)", "claude-haiku"),
             ("Gemini 3.1 Pro (Google)", "gemini"),
             ("Gemini 3.5 Flash (Google)", "gemini-flash")
