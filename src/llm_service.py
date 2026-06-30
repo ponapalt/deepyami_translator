@@ -149,7 +149,6 @@ CRITICAL OUTPUT INSTRUCTIONS:
             from langchain_openai import ChatOpenAI
             return ChatOpenAI(
                 model="gpt-5.5",
-                temperature=0.3,
                 reasoning_effort="none",
                 api_key=self.api_key
             )
@@ -157,7 +156,6 @@ CRITICAL OUTPUT INSTRUCTIONS:
             from langchain_openai import ChatOpenAI
             return ChatOpenAI(
                 model="gpt-5.4-mini",
-                temperature=0.3,
                 reasoning_effort="low",
                 api_key=self.api_key
             )
@@ -165,21 +163,18 @@ CRITICAL OUTPUT INSTRUCTIONS:
             from langchain_anthropic import ChatAnthropic
             return ChatAnthropic(
                 model="claude-sonnet-5",
-                temperature=0.3,
                 api_key=self.api_key
             )
         elif self.model_type == "claude-haiku":
             from langchain_anthropic import ChatAnthropic
             return ChatAnthropic(
                 model="claude-haiku-4-5",
-                temperature=0.3,
                 api_key=self.api_key
             )
         elif self.model_type == "gemini":
             from langchain_google_genai import ChatGoogleGenerativeAI
             return ChatGoogleGenerativeAI(
                 model="gemini-3.1-pro-preview",
-                temperature=0.3,
                 thinking_level="low",
                 google_api_key=self.api_key
             )
@@ -187,7 +182,6 @@ CRITICAL OUTPUT INSTRUCTIONS:
             from langchain_google_genai import ChatGoogleGenerativeAI
             return ChatGoogleGenerativeAI(
                 model="gemini-3.5-flash",
-                temperature=0.3,
                 thinking_level="low",
                 google_api_key=self.api_key
             )
