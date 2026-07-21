@@ -148,14 +148,14 @@ CRITICAL OUTPUT INSTRUCTIONS:
         if self.model_type == "gpt":
             from langchain_openai import ChatOpenAI
             return ChatOpenAI(
-                model="gpt-5.5",
+                model="gpt-5.6-terra",
                 reasoning_effort="none",
                 api_key=self.api_key
             )
         elif self.model_type == "gpt-mini":
             from langchain_openai import ChatOpenAI
             return ChatOpenAI(
-                model="gpt-5.4-mini",
+                model="gpt-5.6-luna",
                 reasoning_effort="low",
                 api_key=self.api_key
             )
@@ -181,7 +181,7 @@ CRITICAL OUTPUT INSTRUCTIONS:
         elif self.model_type == "gemini-flash":
             from langchain_google_genai import ChatGoogleGenerativeAI
             return ChatGoogleGenerativeAI(
-                model="gemini-3.5-flash",
+                model="gemini-3.6-flash",
                 thinking_level="low",
                 google_api_key=self.api_key
             )

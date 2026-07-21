@@ -116,14 +116,14 @@ deepyami_translator/
 #### 2.1 LangChain統合
 
 **対応モデル：**
-- OpenAI GPT-5.5
+- OpenAI GPT-5.6 Terra
   - langchain-openai の ChatOpenAI
-  - モデル名: "gpt-5.5"
+  - モデル名: "gpt-5.6-terra"
   - model_type: "gpt"
 
-- OpenAI GPT-5.4-mini
+- OpenAI GPT-5.6 Luna
   - langchain-openai の ChatOpenAI
-  - モデル名: "gpt-5.4-mini"
+  - モデル名: "gpt-5.6-luna"
   - model_type: "gpt-mini"
 
 - Anthropic Claude Sonnet 5
@@ -142,9 +142,9 @@ deepyami_translator/
   - model_type: "gemini"
   - Gemini 3の返答形式に対応（リスト形式のレスポンス処理）
 
-- Google Gemini 3.5 Flash
+- Google Gemini 3.6 Flash
   - langchain-google-genai の ChatGoogleGenerativeAI
-  - モデル名: "gemini-3.5-flash"
+  - モデル名: "gemini-3.6-flash"
   - model_type: "gemini-flash"
   - Gemini 3の返答形式に対応（リスト形式のレスポンス処理）
 

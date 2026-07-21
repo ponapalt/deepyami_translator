@@ -96,12 +96,12 @@ class MainWindow:
 
     # モデル名の表示マッピング
     MODEL_DISPLAY_NAMES = {
-        "gpt": "GPT-5.5",
-        "gpt-mini": "GPT-5.4-mini",
+        "gpt": "GPT-5.6 Terra",
+        "gpt-mini": "GPT-5.6 Luna",
         "claude": "Claude Sonnet 5",
         "claude-haiku": "Claude Haiku 4.5",
         "gemini": "Gemini 3.1 Pro",
-        "gemini-flash": "Gemini 3.5 Flash"
+        "gemini-flash": "Gemini 3.6 Flash"
     }
 
     def __init__(self, root: tk.Tk, config_manager: ConfigManager):
