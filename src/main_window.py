@@ -101,7 +101,7 @@ class MainWindow:
         "claude": "Claude Sonnet 5",
         "claude-haiku": "Claude Haiku 4.5",
         "gemini": "Gemini 3.1 Pro",
-        "gemini-flash": "Gemini 3.6 Flash"
+        "gemini-flash": "Gemini 3.7 Flash"
     }
 
     def __init__(self, root: tk.Tk, config_manager: ConfigManager):
@@ -826,12 +826,12 @@ class MainWindow:
             "DeepYami翻訳アプリ v1.1\n\n"
             "LangChainと複数のLLMモデルを使用した翻訳アプリケーション\n\n"
             "対応モデル:\n"
-            "- OpenAI GPT-4.1\n"
-            "- OpenAI GPT-4.1-mini\n"
-            "- Anthropic Claude Sonnet 5\n"
-            "- Anthropic Claude Haiku 4.5\n"
-            "- Google Gemini 2.5 Pro\n"
-            "- Google Gemini 2.5 Flash"
+            "- OpenAI GPT-5.x Terra\n"
+            "- OpenAI GPT-5.x Luna\n"
+            "- Anthropic Claude Sonnet\n"
+            "- Anthropic Claude Haiku\n"
+            "- Google Gemini Pro\n"
+            "- Google Gemini Flash"
         )
 
     def _detect_language(self, text: str) -> str:
