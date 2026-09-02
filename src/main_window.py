@@ -101,7 +101,7 @@ class MainWindow:
         "claude": "Claude Sonnet 5",
         "claude-haiku": "Claude Haiku 4.5",
         "gemini": "Gemini 3.1 Pro",
-        "gemini-flash": "Gemini 3.7 Flash"
+        "gemini-flash": "Gemini 3.8 Flash"
     }
 
     def __init__(self, root: tk.Tk, config_manager: ConfigManager):

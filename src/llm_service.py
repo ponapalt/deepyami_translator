@@ -181,7 +181,7 @@ CRITICAL OUTPUT INSTRUCTIONS:
         elif self.model_type == "gemini-flash":
             from langchain_google_genai import ChatGoogleGenerativeAI
             return ChatGoogleGenerativeAI(
-                model="gemini-3.7-flash",
+                model="gemini-3.8-flash",
                 thinking_level="low",
                 google_api_key=self.api_key
             )
