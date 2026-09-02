@@ -7,6 +7,8 @@ from typing import Optional, Callable, Iterator, Union, List, Dict, Any
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
+from src import models
+
 
 def extract_content_text(content: Union[str, List[Dict[str, Any]]]) -> str:
     """
@@ -35,6 +37,32 @@ def extract_content_text(content: Union[str, List[Dict[str, Any]]]) -> str:
         return str(content)
 
 
+def _create_openai_llm(model_name: str, api_key: str, params: Dict[str, Any]):
+    """OpenAIのLLMインスタンスを生成"""
+    from langchain_openai import ChatOpenAI
+    return ChatOpenAI(model=model_name, api_key=api_key, **params)
+
+
+def _create_anthropic_llm(model_name: str, api_key: str, params: Dict[str, Any]):
+    """AnthropicのLLMインスタンスを生成"""
+    from langchain_anthropic import ChatAnthropic
+    return ChatAnthropic(model=model_name, api_key=api_key, **params)
+
+
+def _create_google_llm(model_name: str, api_key: str, params: Dict[str, Any]):
+    """GoogleのLLMインスタンスを生成"""
+    from langchain_google_genai import ChatGoogleGenerativeAI
+    return ChatGoogleGenerativeAI(model=model_name, google_api_key=api_key, **params)
+
+
+# プロバイダーごとのLLM生成関数（models.PROVIDERSのkeyに対応）
+PROVIDER_FACTORIES = {
+    "openai": _create_openai_llm,
+    "anthropic": _create_anthropic_llm,
+    "google": _create_google_llm,
+}
+
+
 class TranslationService:
     """翻訳サービスを提供するクラス"""
 
@@ -57,7 +85,7 @@ class TranslationService:
     def __init__(self, model_type: str, api_key: str):
         """
         Args:
-            model_type: "gpt", "claude", "gemini"のいずれか
+            model_type: models.MODELS に定義されたモデル識別子
             api_key: 対応するAPIキー
         """
         self.model_type = model_type
@@ -145,48 +173,15 @@ CRITICAL OUTPUT INSTRUCTIONS:
         Raises:
             ValueError: サポートされていないモデルタイプの場合
         """
-        if self.model_type == "gpt":
-            from langchain_openai import ChatOpenAI
-            return ChatOpenAI(
-                model="gpt-5.6-terra",
-                reasoning_effort="none",
-                api_key=self.api_key
-            )
-        elif self.model_type == "gpt-mini":
-            from langchain_openai import ChatOpenAI
-            return ChatOpenAI(
-                model="gpt-5.6-luna",
-                reasoning_effort="low",
-                api_key=self.api_key
-            )
-        elif self.model_type == "claude":
-            from langchain_anthropic import ChatAnthropic
-            return ChatAnthropic(
-                model="claude-sonnet-5",
-                api_key=self.api_key
-            )
-        elif self.model_type == "claude-haiku":
-            from langchain_anthropic import ChatAnthropic
-            return ChatAnthropic(
-                model="claude-haiku-4-5",
-                api_key=self.api_key
-            )
-        elif self.model_type == "gemini":
-            from langchain_google_genai import ChatGoogleGenerativeAI
-            return ChatGoogleGenerativeAI(
-                model="gemini-3.1-pro-preview",
-                thinking_level="low",
-                google_api_key=self.api_key
-            )
-        elif self.model_type == "gemini-flash":
-            from langchain_google_genai import ChatGoogleGenerativeAI
-            return ChatGoogleGenerativeAI(
-                model="gemini-3.8-flash",
-                thinking_level="low",
-                google_api_key=self.api_key
-            )
-        else:
+        model = models.get_model(self.model_type)
+        if model is None:
             raise ValueError(f"サポートされていないモデルタイプ: {self.model_type}")
+
+        factory = PROVIDER_FACTORIES.get(model.provider)
+        if factory is None:
+            raise ValueError(f"サポートされていないプロバイダー: {model.provider}")
+
+        return factory(model.model_name, self.api_key, model.params)
 
     def translate(self, text: str, target_lang: str, style: str = "ビジネス",
                   streaming_callback: Optional[Callable[[str], None]] = None) -> Optional[str]:

@@ -7,8 +7,11 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import threading
 from src.config_manager import ConfigManager
+from src.history_dialog import HistoryDialog
+from src.history_manager import HistoryManager
 from src.settings_dialog import SettingsDialog
 from src.llm_service import TranslationService
+from src import models
 
 
 class ToolTip:
@@ -87,22 +90,8 @@ class MainWindow:
         "English"
     ]
 
-    # 翻訳スタイルリスト
-    STYLES = [
-        "ビジネス",
-        "標準",
-        "友人"
-    ]
-
-    # モデル名の表示マッピング
-    MODEL_DISPLAY_NAMES = {
-        "gpt": "GPT-5.6 Terra",
-        "gpt-mini": "GPT-5.6 Luna",
-        "claude": "Claude Sonnet 5",
-        "claude-haiku": "Claude Haiku 4.5",
-        "gemini": "Gemini 3.1 Pro",
-        "gemini-flash": "Gemini 3.8 Flash"
-    }
+    # 翻訳スタイルリスト（定義は ConfigManager.TRANSLATION_STYLES）
+    STYLES = ConfigManager.TRANSLATION_STYLES
 
     def __init__(self, root: tk.Tk, config_manager: ConfigManager):
         """
@@ -113,6 +102,7 @@ class MainWindow:
         self.root = root
         self.config_manager = config_manager
         self.translation_service = None
+        self.history_manager = HistoryManager()  # 翻訳履歴
         self.debounce_timer = None  # 自動翻訳用タイマー
         self.current_thread = None  # 現在実行中の翻訳/校正スレッド
         self.cancel_flag = False  # 翻訳/校正中断フラグ
@@ -169,19 +159,63 @@ class MainWindow:
         edit_menu.add_command(label="すべて選択", command=self._on_select_all, accelerator="Ctrl+A")
 
         # 設定メニュー
-        settings_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="設定", menu=settings_menu)
-        settings_menu.add_command(label="API設定", command=self._on_settings)
+        self.settings_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="設定", menu=self.settings_menu)
 
-        # ヘルプメニュー
-        help_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="ヘルプ", menu=help_menu)
-        help_menu.add_command(label="バージョン情報", command=self._on_about)
+        # 自動翻訳のON/OFF（左ペインのチェックボックスと同じ変数を共有し、
+        # どちらから操作しても表示が同期する）
+        self.auto_translate_var = tk.BooleanVar(
+            value=self.config_manager.is_auto_translate_enabled()
+        )
+        self.settings_menu.add_checkbutton(
+            label="自動翻訳（編集後2秒）",
+            variable=self.auto_translate_var,
+            command=self._on_auto_translate_toggle
+        )
+        # UI状態更新でこの項目を有効/無効にするため位置を控えておく
+        self.auto_translate_menu_index = self.settings_menu.index(tk.END)
+        self.settings_menu.add_separator()
+        self.settings_menu.add_command(label="API設定...", command=self._on_settings)
+
+        # 履歴メニュー
+        history_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="履歴", menu=history_menu)
+        history_menu.add_command(
+            label="翻訳履歴...",
+            command=self._on_history,
+            accelerator="Ctrl+H"
+        )
+        history_menu.add_separator()
+
+        self.history_enabled_var = tk.BooleanVar(
+            value=self.config_manager.is_history_enabled()
+        )
+        history_menu.add_checkbutton(
+            label="履歴を記録する",
+            variable=self.history_enabled_var,
+            command=self._on_history_enabled_toggle
+        )
+
+        # モデルメニュー（models.MODELS から自動生成）
+        self.model_menu_var = tk.StringVar(value=self.config_manager.get_model_type())
+        model_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="モデル", menu=model_menu)
+        for index, (provider, provider_models) in enumerate(models.models_by_provider()):
+            if index > 0:
+                model_menu.add_separator()
+            for model in provider_models:
+                model_menu.add_radiobutton(
+                    label=f"{model.display_name} ({provider.display_name})",
+                    variable=self.model_menu_var,
+                    value=model.model_type,
+                    command=self._on_model_menu_select
+                )
 
         # キーボードショートカット
         # Ctrl+A以外はTextウィジェットのデフォルト動作を使用
         # Ctrl+Aのみカスタム実装（全選択）
         self.root.bind('<Control-a>', lambda e: self._on_select_all())
+        self.root.bind('<Control-h>', lambda e: self._on_history())
 
     def _create_widgets(self):
         """UI要素を作成"""
@@ -215,9 +249,13 @@ class MainWindow:
         left_frame = ttk.Frame(self.paned_window)
         self.paned_window.add(left_frame, weight=1)
 
-        # 左側コントロール（翻訳先言語、スタイル、ボタン）
+        # 左側コントロール
+        # 1段目: 翻訳先言語・スタイル / 2段目: 各種ボタン・自動翻訳
+        # （1段にまとめるとウィンドウ幅によってはボタンが見切れるため2段構成）
         left_control = ttk.Frame(left_frame)
-        left_control.pack(fill=tk.X, pady=(0, 5))
+        left_control.pack(fill=tk.X, pady=(0, 3))
+        left_control_buttons = ttk.Frame(left_frame)
+        left_control_buttons.pack(fill=tk.X, pady=(0, 5))
 
         # 翻訳先言語
         ttk.Label(left_control, text="翻訳先:").pack(side=tk.LEFT, padx=(0, 5))
@@ -247,7 +285,7 @@ class MainWindow:
 
         # 翻訳ボタン
         self.translate_btn = ttk.Button(
-            left_control,
+            left_control_buttons,
             text="翻訳 →",
             command=self._on_translate,
             width=10
@@ -257,7 +295,7 @@ class MainWindow:
 
         # 校正ボタン
         self.proofread_btn = ttk.Button(
-            left_control,
+            left_control_buttons,
             text="校正",
             command=self._on_proofread,
             width=10
@@ -267,7 +305,7 @@ class MainWindow:
 
         # 中止ボタン
         self.cancel_btn = ttk.Button(
-            left_control,
+            left_control_buttons,
             text="中止",
             command=self._on_cancel_translation,
             width=10,
@@ -275,6 +313,16 @@ class MainWindow:
         )
         self.cancel_btn.pack(side=tk.LEFT, padx=(0, 5))
         ToolTip(self.cancel_btn, "翻訳・校正を中止")
+
+        # 自動翻訳チェックボックス（「モデル」メニューの項目と変数を共有）
+        self.auto_translate_check = ttk.Checkbutton(
+            left_control_buttons,
+            text="自動翻訳",
+            variable=self.auto_translate_var,
+            command=self._on_auto_translate_toggle
+        )
+        self.auto_translate_check.pack(side=tk.LEFT, padx=(5, 0))
+        ToolTip(self.auto_translate_check, "編集後2秒で自動的に翻訳する")
 
         # 左側テキストエリア
         source_frame = ttk.Frame(left_frame)
@@ -408,6 +456,9 @@ class MainWindow:
             self.target_lang_combo.config(state="readonly")
             self.style_combo.config(state="readonly")
             self.copy_result_btn.config(state=tk.NORMAL)
+            self.auto_translate_check.config(state=tk.NORMAL)
+            self.settings_menu.entryconfig(self.auto_translate_menu_index,
+                                           state=tk.NORMAL)
             # 中止ボタンは処理中のみ有効
             self.status_bar.config(text="準備完了")
         else:
@@ -421,6 +472,9 @@ class MainWindow:
             self.target_lang_combo.config(state=tk.DISABLED)
             self.style_combo.config(state=tk.DISABLED)
             self.copy_result_btn.config(state=tk.DISABLED)
+            self.auto_translate_check.config(state=tk.DISABLED)
+            self.settings_menu.entryconfig(self.auto_translate_menu_index,
+                                           state=tk.DISABLED)
             self.status_bar.config(text="API設定が必要です")
 
     def _initialize_translation_service(self):
@@ -431,7 +485,7 @@ class MainWindow:
 
             if model_type and api_key:
                 self.translation_service = TranslationService(model_type, api_key)
-                model_display_name = self.MODEL_DISPLAY_NAMES.get(model_type, model_type.upper())
+                model_display_name = models.get_display_name(model_type)
                 self.status_bar.config(text=f"翻訳サービス準備完了 ({model_display_name})")
                 self._update_model_display(model_type)
         except Exception as e:
@@ -440,12 +494,56 @@ class MainWindow:
             self._update_model_display(None)
 
     def _update_model_display(self, model_type: str = None):
-        """現在のモデル表示を更新"""
+        """現在のモデル表示とモデルメニューの選択状態を更新"""
         if model_type:
-            model_display_name = self.MODEL_DISPLAY_NAMES.get(model_type, model_type)
+            model_display_name = models.get_display_name(model_type)
             self.current_model_label.config(text=f"モデル: {model_display_name}")
         else:
             self.current_model_label.config(text="モデル: 未設定")
+
+        # メニューのラジオボタンを実際の設定と同期
+        self.model_menu_var.set(model_type or "")
+
+    def _on_model_menu_select(self):
+        """モデルメニューでモデルが選択されたときの処理"""
+        model_type = self.model_menu_var.get()
+        current_model_type = self.config_manager.get_model_type()
+
+        if model_type == current_model_type:
+            return
+
+        # 翻訳・校正の実行中は切り替えない（実行中の処理と不整合になるため）
+        if self.current_thread and self.current_thread.is_alive():
+            messagebox.showwarning(
+                "処理中",
+                "翻訳・校正の実行中はモデルを切り替えられません。\n"
+                "処理の完了を待つか、中止してください。"
+            )
+            self.model_menu_var.set(current_model_type)
+            return
+
+        # APIキーが未設定の場合は設定ダイアログへ誘導
+        if not self.config_manager.get_api_key_for_model(model_type):
+            provider_key = models.get_provider_key(model_type)
+            provider_name = models.PROVIDER_MAP[provider_key].display_name
+            self.model_menu_var.set(current_model_type)
+            if messagebox.askyesno(
+                "APIキーが未設定です",
+                f"{models.get_display_name(model_type)} を使用するには "
+                f"{provider_name} のAPIキーが必要です。\n"
+                "設定を開きますか？"
+            ):
+                self._on_settings()
+            return
+
+        # モデルを切り替えて保存
+        self.config_manager.set_model_type(model_type)
+        self.config_manager.save()
+        self._initialize_translation_service()
+        self._update_ui_state()
+        self.status_bar.config(
+            text=f"モデルを {models.get_display_name(model_type)} に切り替えました"
+        )
 
     def _cancel_current_task(self):
         """現在実行中の翻訳/校正タスクを中断"""
@@ -535,8 +633,9 @@ class MainWindow:
                     self.root.after(0, lambda: self._on_translation_cancelled())
                     return
 
-                # UIスレッドで完了処理
-                self.root.after(0, lambda: self._on_translation_complete(result))
+                # UIスレッドで完了処理（履歴に残すため実行時の条件も渡す）
+                self.root.after(0, lambda: self._on_translation_complete(
+                    result, source_text, target_lang, style, auto_mode))
             except Exception as e:
                 if not self.cancel_flag:
                     self.root.after(0, lambda: self._show_translation_error(str(e)))
@@ -544,9 +643,21 @@ class MainWindow:
         self.current_thread = threading.Thread(target=translate_thread, daemon=True)
         self.current_thread.start()
 
-    def _on_translation_complete(self, result: str):
-        """翻訳完了時の処理"""
+    def _on_translation_complete(self, result: str, source_text: str = None,
+                                 target_lang: str = None, style: str = None,
+                                 auto_mode: bool = False):
+        """翻訳完了時の処理
+
+        Args:
+            result: 翻訳結果（失敗・中断時はNone）
+            source_text: 翻訳元テキスト（履歴の記録用）
+            target_lang: 翻訳先言語（履歴の記録用）
+            style: 翻訳スタイル（履歴の記録用）
+            auto_mode: 自動翻訳による実行かどうか（履歴の記録用）
+        """
         if result:
+            self._record_history("translate", source_text, result,
+                                 target_lang, style, auto_mode)
             self.status_bar.config(text="翻訳完了")
         else:
             messagebox.showerror("エラー", "翻訳に失敗しました。")
@@ -642,8 +753,9 @@ class MainWindow:
                     self.root.after(0, lambda: self._on_proofread_cancelled())
                     return
 
-                # UIスレッドで完了処理
-                self.root.after(0, lambda: self._on_proofread_complete(result))
+                # UIスレッドで完了処理（履歴に残すため校正前のテキストも渡す）
+                self.root.after(0, lambda: self._on_proofread_complete(
+                    result, original_text, style))
             except Exception as e:
                 if not self.cancel_flag:
                     self.root.after(0, lambda: self._show_proofread_error(str(e)))
@@ -651,9 +763,19 @@ class MainWindow:
         self.current_thread = threading.Thread(target=proofread_thread, daemon=True)
         self.current_thread.start()
 
-    def _on_proofread_complete(self, result: str):
-        """校正完了時の処理"""
+    def _on_proofread_complete(self, result: str, source_text: str = None,
+                               style: str = None):
+        """校正完了時の処理
+
+        Args:
+            result: 校正結果（失敗・中断時はNone）
+            source_text: 校正前のテキスト（履歴の記録用）
+            style: 翻訳スタイル（履歴の記録用）
+        """
         if result:
+            # 校正は翻訳先言語を持たない
+            self._record_history("proofread", source_text, result,
+                                 None, style, False)
             self.status_bar.config(text="校正完了")
         else:
             messagebox.showerror("エラー", "校正に失敗しました。")
@@ -758,7 +880,7 @@ class MainWindow:
         # 自動翻訳が有効な場合のみ、2秒後に自動翻訳を実行するタイマーをセット
         if (self.translation_service and
             self.config_manager.is_configured() and
-            self.config_manager.is_auto_translate_enabled()):
+            self.auto_translate_var.get()):
             self.debounce_timer = self.root.after(2000, self._auto_translate)
 
     def _auto_translate(self):
@@ -811,28 +933,122 @@ class MainWindow:
             # イベントバインディングを再設定
             self.source_text.bind('<KeyRelease>', self._on_text_change)
 
+    def _on_auto_translate_toggle(self):
+        """自動翻訳のON/OFFが切り替えられたときの処理
+
+        メニュー項目と左ペインのチェックボックスの両方から呼ばれる。
+        """
+        enabled = self.auto_translate_var.get()
+        self.config_manager.set_auto_translate_enabled(enabled)
+        self.config_manager.save()
+
+        # OFFにした場合は予約済みの自動翻訳をキャンセル
+        if not enabled and self.debounce_timer:
+            self.root.after_cancel(self.debounce_timer)
+            self.debounce_timer = None
+
+        self.status_bar.config(
+            text=f"自動翻訳を{'ON' if enabled else 'OFF'}にしました"
+        )
+
     def _on_settings(self):
-        """設定ダイアログを開く"""
+        """API設定ダイアログを開く"""
         dialog = SettingsDialog(self.root, self.config_manager)
         if dialog.show():
             # 設定が保存された場合、翻訳サービスを再初期化
+            # （初回設定時はダイアログ側でモデルが自動選択される）
             self._initialize_translation_service()
             self._update_ui_state()
+            if not self.config_manager.is_configured():
+                self._update_model_display(None)
 
-    def _on_about(self):
-        """バージョン情報"""
-        messagebox.showinfo(
-            "バージョン情報",
-            "DeepYami翻訳アプリ v1.1\n\n"
-            "LangChainと複数のLLMモデルを使用した翻訳アプリケーション\n\n"
-            "対応モデル:\n"
-            "- OpenAI GPT-5.x Terra\n"
-            "- OpenAI GPT-5.x Luna\n"
-            "- Anthropic Claude Sonnet\n"
-            "- Anthropic Claude Haiku\n"
-            "- Google Gemini Pro\n"
-            "- Google Gemini Flash"
+    def _on_history_enabled_toggle(self):
+        """履歴の記録ON/OFFが切り替えられたときの処理"""
+        enabled = self.history_enabled_var.get()
+        self.config_manager.set_history_enabled(enabled)
+        self.config_manager.save()
+
+        self.status_bar.config(
+            text=f"履歴の記録を{'ON' if enabled else 'OFF'}にしました"
         )
+
+    def _record_history(self, kind: str, source_text: str, result_text: str,
+                        target_lang, style: str, auto: bool):
+        """翻訳/校正の結果を履歴に記録する
+
+        完了ハンドラ（root.after 経由）からのみ呼ばれるため、常にTkの
+        メインスレッド上で動く。ワーカースレッドから直接呼ばないこと。
+
+        Args:
+            kind: "translate" または "proofread"
+            source_text: 原文（校正の場合は校正前のテキスト）
+            result_text: 結果
+            target_lang: 翻訳先言語（校正の場合はNone）
+            style: 翻訳スタイル
+            auto: 自動翻訳による実行かどうか
+        """
+        if not self.config_manager.is_history_enabled():
+            return
+
+        # 記録に必要な情報が欠けている場合は残さない
+        if not source_text or not result_text or not style:
+            return
+
+        model_type = self.config_manager.get_model_type()
+        self.history_manager.record(
+            kind=kind,
+            source_text=source_text,
+            result_text=result_text,
+            source_lang=self._detect_language(source_text),
+            target_lang=target_lang,
+            style=style,
+            model_type=model_type,
+            model_display=models.get_display_name(model_type),
+            auto=auto
+        )
+        self.history_manager.save()
+
+    def _on_history(self):
+        """翻訳履歴ダイアログを開く"""
+        dialog = HistoryDialog(self.root, self.history_manager)
+        entry = dialog.show()
+        if entry:
+            self._restore_history_entry(entry)
+
+    def _restore_history_entry(self, entry: dict):
+        """履歴を左右のペインへ復元（自動翻訳を発火させない）
+
+        種別によらず、原文を左ペイン・結果を右ペインに入れる。
+        """
+        # テキスト変更イベントを一時的に解除（自動翻訳を防ぐ）
+        self.source_text.unbind('<KeyRelease>')
+
+        # API未設定時は翻訳元テキストが無効化されており書き込めないため、
+        # 一時的に有効化する（履歴の閲覧・復元は未設定でも行えるようにしている）
+        source_state = self.source_text.cget("state")
+        self.source_text.config(state=tk.NORMAL)
+
+        self.source_text.delete("1.0", tk.END)
+        self.source_text.insert("1.0", entry.get("source_text", ""))
+
+        self.source_text.config(state=source_state)
+
+        self.target_text.delete("1.0", tk.END)
+        self.target_text.insert("1.0", entry.get("result_text", ""))
+
+        # 当時の翻訳先言語とスタイルを復元（選択肢に無い値は無視）
+        target_lang = entry.get("target_lang")
+        if target_lang in self.LANGUAGES:
+            self.target_lang_var.set(target_lang)
+
+        style = entry.get("style")
+        if style in self.STYLES:
+            self.style_var.set(style)
+
+        # イベントバインディングを再設定
+        self.source_text.bind('<KeyRelease>', self._on_text_change)
+
+        self.status_bar.config(text="履歴を復元しました")
 
     def _detect_language(self, text: str) -> str:
         """

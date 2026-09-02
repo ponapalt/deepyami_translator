@@ -1,386 +1,289 @@
-# DeepYami翻訳アプリ - 実装計画書
+# DeepYami翻訳アプリ - 開発ガイド
 
-## プロジェクト概要
+Python・LangChain・LLMを使用したDeepL風の翻訳アプリケーション。
+ユーザー向けの機能説明・セットアップ手順は `README.md` を参照。
+本ドキュメントは**コードを変更する際に知っておくべきこと**のみを扱う。
 
-Python・LangChain・LLMを使用した、DeepL風の翻訳アプリケーション
-
-### 主要機能
-- 左右2分割のUI（左：翻訳元、右：翻訳先）
-- メニューバー付きのメモ帳風UI
-- 複数LLMモデル対応（GPT-5.5、GPT-5.4-mini、Claude Sonnet 5、Claude Haiku 4.5、Gemini 3.1 Pro、Gemini 3.8 Flash）
-- 多言語対応（日本語、中国語簡体字、中国語繁体字、韓国語、英語）
-- 翻訳スタイル選択（ビジネス、同僚、友人）
-- 自動校正機能（元の言語を維持したまま文法・スペルを修正）
-- 自動翻訳機能（編集後2秒で自動翻訳、ON/OFF切替可能）
-- 翻訳・校正のキャンセル機能（実行中の処理を中断可能）
-- テキスト自動保存・復元（終了時に保存、起動時に復元）
-- ウィンドウサイズ保存・復元（終了時に保存、起動時に復元）
-- 現在使用中のモデル表示（右ペインのコピーボタン横に表示）
-- 設定管理（APIキー、LLMモデル選択、自動翻訳ON/OFF）
-- プロンプトインジェクション対策（入力の安全性を確保）
-- クロスプラットフォーム対応（Windows: start.bat、macOS/Linux: start.sh）
-
-## アーキテクチャ設計
-
-### プロジェクト構造
+## プロジェクト構造
 
 ```
 deepyami_translator/
-├── app.py                    # メインエントリーポイント
-├── start.bat                 # Windows起動スクリプト
-├── requirements.txt          # Python依存関係
-├── config.json              # 設定ファイル（gitignore）
-├── .gitignore
-├── README.md
-├── CLAUDE.md                # 本ドキュメント
+├── app.py               # エントリーポイント
+├── start_win.bat        # Windows起動スクリプト（venv作成・依存導入・起動）
+├── start_mac.sh         # macOS/Linux起動スクリプト
+├── requirements.txt     # 依存関係（langchain 1.x系）
+├── config.json          # 設定ファイル（gitignore対象）
+├── history.json         # 翻訳履歴（gitignore対象）
 └── src/
-    ├── __init__.py
-    ├── main_window.py       # メインウィンドウUI
-    ├── settings_dialog.py   # 設定ダイアログUI
-    ├── llm_service.py       # LLM統合サービス
-    └── config_manager.py    # 設定管理
+    ├── models.py          # LLMモデル定義テーブル（全モジュール共通）
+    ├── config_manager.py  # 設定の読み書き
+    ├── history_manager.py # 翻訳履歴の読み書き
+    ├── llm_service.py     # LangChain統合・翻訳/校正
+    ├── settings_dialog.py # API設定ダイアログ
+    ├── history_dialog.py  # 翻訳履歴ダイアログ
+    └── main_window.py     # メインウィンドウUI
 ```
-
-## 詳細設計
-
-### 1. UI設計（tkinter使用）
-
-#### 1.1 メインウィンドウ（main_window.py）
-
-**構成要素：**
-- メニューバー
-  - ファイル
-    - 終了
-  - 編集
-    - 元に戻す
-    - やり直し
-    - 切り取り
-    - コピー
-    - 貼り付け
-    - すべて選択
-  - 設定
-    - API設定
-  - ヘルプ
-    - バージョン情報
-
-- 警告バナー（設定未完了時）
-  - 「設定を完了してください」メッセージ
-  - 設定ボタン
-
-- PanedWindow（2分割レイアウト）
-  - 左側パネル
-    - 翻訳先言語選択（コンボボックス）
-    - 翻訳スタイル選択（ビジネス/同僚/友人）
-    - 翻訳ボタン
-    - 校正ボタン
-    - 翻訳元テキストエリア（編集可能、自動保存対応）
-  - 右側パネル
-    - コピーボタン
-    - 翻訳結果テキストエリア（読み取り専用、自動保存対応）
-
-**状態管理：**
-- 設定完了フラグ
-  - True: 通常動作
-  - False: テキストエリア無効化、警告バナー表示
-
-#### 1.2 設定ダイアログ（settings_dialog.py）
-
-**構成要素：**
-- LLMモデル選択
-  - ラジオボタン: GPT-5.5 / GPT-5.4-mini / Claude Sonnet 5 / Claude Haiku 4.5 / Gemini 3.1 Pro / Gemini 3.8 Flash
-
-- APIキー入力
-  - OpenAI APIキー（GPT-5.5/GPT-5.4-mini選択時に表示）
-  - Anthropic APIキー（Claude Sonnet 5/Claude Haiku 4.5選択時に表示）
-  - Google APIキー（Gemini Pro/Gemini Flash選択時に表示）
-  - 表示/非表示トグルボタン
-
-- オプション
-  - 自動翻訳ON/OFF（チェックボックス、デフォルト：OFF）
-
-- 保存・キャンセルボタン
-
-**バリデーション：**
-- APIキー形式チェック
-- 必須項目入力確認
-
-**重要な実装ガイドライン：**
-- ダイアログサイズ: 500x650（モデル選択肢が6つになったため十分な高さが必要）
-- モデル選択肢を追加・削除する場合は、ダイアログの高さを調整すること
-  - 1モデルあたり約25-30pxの高さが必要
-  - すべての要素（モデル選択、APIキー入力、オプション、ボタン）が画面内に収まることを確認
-  - 必要に応じてダイアログサイズを拡大する（例：モデルが8つなら700px程度）
-
-### 2. LLM統合（llm_service.py）
-
-#### 2.1 LangChain統合
-
-**対応モデル：**
-- OpenAI GPT-5.6 Terra
-  - langchain-openai の ChatOpenAI
-  - モデル名: "gpt-5.6-terra"
-  - model_type: "gpt"
-
-- OpenAI GPT-5.6 Luna
-  - langchain-openai の ChatOpenAI
-  - モデル名: "gpt-5.6-luna"
-  - model_type: "gpt-mini"
-
-- Anthropic Claude Sonnet 5
-  - langchain-anthropic の ChatAnthropic
-  - モデル名: "claude-sonnet-5"
-  - model_type: "claude"
-
-- Anthropic Claude Haiku 4.5
-  - langchain-anthropic の ChatAnthropic
-  - モデル名: "claude-haiku-4-5"
-  - model_type: "claude-haiku"
-
-- Google Gemini 3.1 Pro
-  - langchain-google-genai の ChatGoogleGenerativeAI
-  - モデル名: "gemini-3.1-pro-preview"
-  - model_type: "gemini"
-  - Gemini 3の返答形式に対応（リスト形式のレスポンス処理）
-
-- Google Gemini 3.8 Flash
-  - langchain-google-genai の ChatGoogleGenerativeAI
-  - モデル名: "gemini-3.8-flash"
-  - model_type: "gemini-flash"
-  - Gemini 3の返答形式に対応（リスト形式のレスポンス処理）
-
-#### 2.2 翻訳プロンプト設計
-
-```python
-prompt_template = """
-You are a professional translator. Translate the following text from {source_lang} to {target_lang}.
-Maintain the original tone, style, and nuance of the text.
-Only output the translated text without any explanations.
-
-Text to translate:
-{text}
-
-Translation:
-"""
-```
-
-#### 2.3 翻訳サービスクラス
-
-```python
-class TranslationService:
-    def __init__(self, model_type: str, api_key: str):
-        """
-        Args:
-            model_type: "gpt", "gpt-mini", "claude", "claude-haiku", "gemini", "gemini-flash"
-            api_key: 対応するAPIキー
-        """
-
-    def translate(self, text: str, source_lang: str, target_lang: str) -> str:
-        """
-        テキストを翻訳
-
-        Args:
-            text: 翻訳対象テキスト
-            source_lang: 翻訳元言語
-            target_lang: 翻訳先言語
-
-        Returns:
-            翻訳されたテキスト
-        """
-```
-
-### 3. 設定管理（config_manager.py）
-
-#### 3.1 設定ファイル構造（config.json）
-
-```json
-{
-    "model_type": "gpt",
-    "api_keys": {
-        "openai": "",
-        "anthropic": "",
-        "google": ""
-    },
-    "last_source_lang": "Japanese",
-    "last_target_lang": "English",
-    "auto_translate_enabled": false,
-    "translation_style": "ビジネス",
-    "last_source_text": "",
-    "last_target_text": "",
-    "window_width": 1000,
-    "window_height": 600
-}
-```
-
-#### 3.2 ConfigManagerクラス
-
-```python
-class ConfigManager:
-    def __init__(self, config_path: str = "config.json"):
-        """設定ファイルの読み込み・初期化"""
-
-    def load(self) -> dict:
-        """設定を読み込む"""
-
-    def save(self, config: dict) -> None:
-        """設定を保存"""
-
-    def is_configured(self) -> bool:
-        """設定が完了しているかチェック"""
-
-    def get_current_api_key(self) -> str:
-        """現在選択されているモデルのAPIキーを取得"""
-```
-
-### 4. 言語定義
-
-**対応言語：**
-- Japanese（日本語）
-- Chinese-Simplified（中国語簡体字）
-- Chinese-Traditional（中国語繁体字）
-- Korean（韓国語）
-- English（英語）
-
-### 5. Windows起動スクリプト（start.bat）
-
-```batch
-@echo off
-chcp 65001 >nul
-echo DeepYami翻訳アプリを起動しています...
-
-REM venvの存在確認
-if not exist "venv\" (
-    echo 仮想環境を作成しています...
-    python -m venv venv
-    if errorlevel 1 (
-        echo エラー: 仮想環境の作成に失敗しました
-        pause
-        exit /b 1
-    )
-)
-
-REM venv有効化
-call venv\Scripts\activate.bat
-
-REM 依存関係インストール
-echo 依存関係をインストールしています...
-pip install -r requirements.txt
-if errorlevel 1 (
-    echo エラー: 依存関係のインストールに失敗しました
-    pause
-    exit /b 1
-)
-
-REM アプリ起動
-echo アプリケーションを起動します...
-python app.py
-
-pause
-```
-
-### 6. 依存関係（requirements.txt）
-
-```
-langchain==0.1.0
-langchain-openai==0.0.5
-langchain-anthropic==0.1.0
-langchain-google-genai==0.0.6
-openai>=1.0.0
-anthropic>=0.8.0
-google-generativeai>=0.3.0
-```
-
-## 実装手順
-
-### フェーズ1: 基盤構築
-1. プロジェクト構造作成
-2. requirements.txt作成
-3. start.bat作成
-4. .gitignore作成
-
-### フェーズ2: バックエンド実装
-1. config_manager.py実装
-   - ConfigManagerクラス
-   - 設定ファイルI/O
-   - バリデーション
-
-2. llm_service.py実装
-   - TranslationServiceクラス
-   - LangChain統合
-   - プロンプト設計
-
-### フェーズ3: フロントエンド実装
-1. settings_dialog.py実装
-   - 設定ダイアログUI
-   - APIキー入力
-   - モデル選択
-
-2. main_window.py実装
-   - メインウィンドウUI
-   - メニューバー
-   - 2分割テキストエリア
-   - 言語選択
-   - 翻訳ボタン
-   - 状態管理
-
-3. app.py実装
-   - アプリケーション起動
-   - 初期化処理
-
-### フェーズ4: テスト・調整
-1. 動作確認
-2. エラーハンドリング改善
-3. UI/UX調整
 
 ## 技術スタック
 
-- **言語**: Python 3.8+
-- **GUI**: tkinter（Python標準ライブラリ）
-- **LLM統合**: LangChain
-- **API**:
-  - OpenAI API（GPT-5.5、GPT-5.4-mini）
-  - Anthropic API（Claude Sonnet 5、Claude Haiku 4.5）
-  - Google Generative AI API（Gemini 3.1 Pro、Gemini 3.8 Flash）
+- Python 3.8+ / tkinter（標準ライブラリ）
+- LangChain 1.x + langchain-openai / langchain-anthropic / langchain-google-genai
+- OpenAI API / Anthropic API / Google Generative AI API
+
+---
+
+## src/models.py — モデル定義テーブル
+
+アプリ全体で使うLLMモデル一覧の**唯一の定義場所**。
+`MODELS`（`ModelSpec`のリスト）と `PROVIDERS`（`ProviderSpec`のリスト）を持つ。
+モデルの具体名・パラメータはこのファイルを直接参照すること（本書には列挙しない）。
+
+参照している箇所:
+
+| ファイル | 用途 |
+|---|---|
+| `settings_dialog.py` | APIキー入力欄の生成、ダイアログサイズ算出 |
+| `main_window.py` | 「モデル」メニュー、右ペインの現在モデル表示 |
+| `llm_service.py` | LLMインスタンス生成（`PROVIDER_FACTORIES`で分岐） |
+| `config_manager.py` | model_type検証、モデル→APIキー紐付け、`api_keys`初期値 |
+
+### モデルを追加・変更する
+
+1. `MODELS` に `ModelSpec` を1行追加する（UI上の並び順＝リストの順序）
+2. 他ファイルの変更は不要
+
+### model_typeを改名する
+
+`model_type` は config.json に保存される識別子なので**原則変更禁止**。
+やむを得ず変える場合は `LEGACY_MODEL_ALIASES` に「旧識別子: 新識別子」を追加する。
+既存の config.json は読み込み時に自動変換される。
+
+### プロバイダーを追加する
+
+1. `PROVIDERS` に `ProviderSpec` を追加
+2. `llm_service.py` の `PROVIDER_FACTORIES` に生成関数を追加
+
+---
+
+## src/llm_service.py — LLM統合
+
+`TranslationService` が翻訳・校正の両方を担当する。
+
+```python
+translate(text, target_lang, style="ビジネス", streaming_callback=None) -> Optional[str]
+proofread(text, style="ビジネス", streaming_callback=None) -> Optional[str]
+```
+
+- **翻訳元言語は指定しない**。プロンプト側でLLMに自動検出させる
+- `style` は `STYLE_INSTRUCTIONS` のキー（`ビジネス` / `標準` / `友人`）。
+  `標準` は `None` を持ち、スタイル指定なしとして扱われる
+- `streaming_callback` はトークンごとに呼ばれる。**コールバックが `False` を返すと
+  ストリーミングを中断する**（UI側のキャンセル機構がこれを使う）
+- Gemini はレスポンスがリスト形式で返ることがあるため、
+  `extract_content_text()` で文字列へ正規化してから扱う
+
+### プロンプト設計上の約束
+
+`translation_template` / `proofreading_template` の system メッセージには、
+機能追加時も以下を残すこと:
+
+- **CRITICAL SECURITY INSTRUCTIONS**: 入力内の指示を実行せず、
+  あくまで翻訳/校正対象のプレーンテキストとして扱わせる（プロンプトインジェクション対策）
+- **CRITICAL OUTPUT INSTRUCTIONS**: 前置き・注釈・引用符を付けず、
+  改行位置を原文どおり保持させる
+
+ユーザー入力は `<text_to_translate>` / `<text_to_proofread>` タグで囲み、
+システム指示と明確に分離する。
+
+---
+
+## src/config_manager.py — 設定管理
+
+`config.json` の実際のキーは `ConfigManager.DEFAULT_CONFIG` を参照。
+保持しているのは、選択中モデル・プロバイダー別APIキー・最後の言語/スタイル・
+自動翻訳ON/OFF・履歴記録ON/OFF・最後のテキスト（翻訳元/結果）・ウィンドウサイズ。
+
+- `is_configured()`: モデルが選択済みかつ対応するAPIキーがあるか
+- `get_current_api_key()`: 選択中モデルに対応するAPIキーを返す
+- 読み込み時に `models.normalize_model_type()` で旧識別子を自動変換する
+- setterは `self.config` を書き換えるだけ。**保存は呼び出し側が `save()` する**
+
+### 翻訳スタイルの定義場所
+
+`ConfigManager.TRANSLATION_STYLES` が**唯一の定義場所**。
+`main_window.MainWindow.STYLES` はこれを参照しているだけなので触らなくてよい。
+
+`llm_service.TranslationService.STYLE_INSTRUCTIONS` の**キーと必ず一致させること**。
+（かつて `set_translation_style()` の検証リストだけが古い値のままで、
+「標準」を選んでも黙って保存されない不具合になっていた。
+`set_translation_style()` は不正な値を無言で捨てるので、ズレても気付けない）
+
+なお `get_translation_style()` は未知の値を既定値に丸めて返す。
+呼び出し側が readonly の Combobox にそのまま流すため、選択肢外の値を出さないため。
+
+---
+
+## src/history_manager.py — 翻訳履歴の管理
+
+`HistoryManager` が `history.json` を読み書きする。
+永続化の流儀は `ConfigManager` に揃えてある（utf-8 / `ensure_ascii=False` /
+`indent=4` / 例外は握って `print` し、アプリを落とさない）。
+
+```json
+{
+    "version": 1,
+    "entries": [ /* 新しい順。index 0 が最新 */ ]
+}
+```
+
+エントリの各キーは `HistoryManager.record()` のdocstringを参照。
+`model_display` は**保存時点の表示名を焼き込む**ので、将来 `MODELS` から
+そのモデルが消えても一覧が壊れない。
+
+- `MAX_ENTRIES`（100）を超えた分は古いものから捨てる
+- `record()` / `delete()` / `clear()` は変更のみ。**保存は呼び出し側が `save()` する**
+- 履歴が壊れていても空の履歴で復旧する（設定と違い、失っても致命的ではない）
+
+### 履歴の統合ルール（`_should_merge`）
+
+自動翻訳は入力が2秒止まるたびに走るため、素直に記録すると
+「これは」「これはテ」「これはテスト」…と履歴が量産される。
+そこで直近エントリと同一視できる場合は、新規追加せず**それを更新**する。
+
+前提として、種別・翻訳先・スタイル・モデルがすべて一致していること。その上で:
+
+- **ルールA（完全重複の抑止）**: 原文も同じなら更新。
+  同じ文で翻訳ボタンを押し直しても履歴が二重にならない
+- **ルールB（単純追記の統合）**: 直近が自動翻訳由来（`auto`）で、
+  原文が**前方一致関係**なら更新（`_is_incremental_edit`）。
+  どちらの向きの前方一致も見るのは、バックスペースで一時的に短くなった場合も
+  同じ編集セッションとして扱うため。
+  文の**途中**に挿入した場合は前方一致にならないので新規エントリになる
+- **手動実行による確定**: ルールBでの更新時、新しい記録が手動実行なら
+  `auto` を `False` に落とす。以降の自動翻訳は統合されず別エントリになる
+
+校正はルールAのみ。校正は原文を結果で置き換えるため、前方一致にはまずならない。
+
+---
+
+## src/settings_dialog.py — API設定ダイアログ
+
+**APIキーの入力のみ**を担当する。モデル選択は「モデル」メニュー、
+自動翻訳設定は「設定」メニューへ移したため、このダイアログには含まれない。
+
+- 入力欄は `models.PROVIDERS` から自動生成される（各欄に表示/非表示トグル付き）
+- バリデーションはAPIキーを最低1つ入力していること
+- 保存時、モデル未選択または選択中モデルのAPIキーが空なら、
+  キーが入力済みのプロバイダーのうち `MODELS` で最初に現れるモデルを自動選択する
+  （初回起動時はAPIキーを入れるだけで設定が完了する）
+
+**ダイアログサイズは自動計算**:
+`DIALOG_WIDTH` x (`BASE_HEIGHT` + `PROVIDER_ROW_HEIGHT` * プロバイダー数)。
+要素を増減した場合は `BASE_HEIGHT` を調整し、`winfo_reqheight()` を
+上回っていることを確認すること。
+
+---
+
+## src/history_dialog.py — 翻訳履歴ダイアログ
+
+`HistoryDialog` は一覧（`ttk.Treeview`）＋プレビュー（左右2分割）＋
+復元/削除ボタンを持つモーダルダイアログ。
+
+**`SettingsDialog` と違い `resizable(True, True)`**（`minsize` 付き）。
+スクロールする一覧を持つため、`BASE_HEIGHT` を積み上げる算術計算方式は使わない。
+
+- Treeview の `iid` にエントリの `id` を使い、選択行の特定を単純にしている
+- プレビューのラベルは種別で切り替える（翻訳: 原文/訳文、校正: 校正前/校正後）
+- `MainWindow` を一切知らない。`show()` が**復元されたエントリ**（なければ `None`）を
+  返し、実際の復元は呼び出し側が行う（`SettingsDialog.result` と同じ責務分離）
+- 削除・全削除はダイアログ内で `history_manager.save()` まで済ませる
+
+---
+
+## src/main_window.py — メインウィンドウ
+
+### メニュー構成
+
+- **ファイル**: 終了
+- **編集**: 元に戻す / やり直し / 切り取り / コピー / 貼り付け / すべて選択
+- **設定**: 自動翻訳（編集後2秒）のON/OFF、API設定...
+- **履歴**: 翻訳履歴...（Ctrl+H）、履歴を記録するON/OFF
+- **モデル**: 各モデルのラジオボタン（プロバイダーごとに区切り線、選択は即保存）
+
+「ヘルプ」メニューは廃止。「モデル」メニューはモデル選択専用とし、設定項目を置かない。
+
+「翻訳履歴...」は `_update_ui_state()` の対象外で、**API未設定でも開ける**
+（過去の記録を見るだけなので妨げる理由がない）。
+
+### レイアウト
+
+PanedWindowによる左右2分割。
+
+- 左ペイン
+  - コントロール1段目: 翻訳先言語選択、翻訳スタイル選択
+  - コントロール2段目: 翻訳ボタン、校正ボタン、中止ボタン、自動翻訳チェックボックス
+  - 翻訳元テキストエリア（編集可能）
+- 右ペイン
+  - 入れ替えボタン、コピーボタン、現在使用中のモデル表示
+  - 翻訳結果テキストエリア（読み取り専用）
+
+**コントロールを1段にまとめてはいけない**。ウィンドウ幅によってウィジェットが
+見切れるため2段構成にしている（1段目331px / 2段目301px必要）。
+
+### 状態管理
+
+- 未設定時（`is_configured()` が False）はテキストエリア等を無効化し、
+  警告バナー「設定を完了してください」を表示する
+- 翻訳/校正はワーカースレッドで実行し、`cancel_flag` と
+  `streaming_callback` の戻り値で中断する
+- 自動翻訳は `debounce_timer`（2秒）で発火。OFFにすると予約済みタイマーを取り消す
+
+### 自動翻訳トグルの同期
+
+「設定」メニューの項目と左ペインのチェックボックスは**同一の `tk.BooleanVar`
+（`auto_translate_var`）を共有**し、`_on_auto_translate_toggle` で即座に保存される。
+トグルする箇所を増やす場合も、同じ変数とハンドラを渡すこと。
+
+### 翻訳履歴の記録と復元
+
+記録は `_on_translation_complete` / `_on_proofread_complete` から
+`_record_history()` を呼んで行う。どちらも `root.after(0, ...)` 経由で
+**Tkのメインスレッド上で動く**ので、履歴の書き換えとファイル書き込みは
+単一スレッドに閉じている。**ワーカースレッドから直接呼ばないこと**。
+
+- 中断・失敗時は結果が `None` になるので、既存の `if result:` の中に置けば記録されない
+- スタイルは実行時に `style_var` から取った値をそのまま渡す（実際にLLMへ渡した値）
+- 復元（`_restore_history_entry`）は種別によらず**原文を左ペイン・結果を右ペイン**に入れる
+- 復元時は `source_text` を一時的に `NORMAL` にする。
+  API未設定時は `_update_ui_state()` が無効化しており、そのままでは書き込めないため
+
+### 言語の入れ替え（`_on_swap_languages`）
+
+翻訳元と翻訳結果を入れ替え、新しい翻訳元の言語を `_detect_language()` で推定する。
+`_detect_language()` は**LLMを使わず文字種の出現数で判定する**（ひらがな/カタカナ/
+ハングル/漢字/ラテン文字、簡体字・繁体字は特徴的な文字集合で区別）。
+対応言語を増やす場合はこの判定ロジックにも手を入れる必要がある。
+
+---
+
+## 対応言語
+
+`Japanese` / `Chinese-Simplified` / `Chinese-Traditional` / `Korean` / `English`
+
+`main_window.LANGUAGES` と `llm_service.TranslationService.LANGUAGE_MAP` の
+両方に定義があるため、増減させる際は両方を更新すること。
+
+---
 
 ## セキュリティ考慮事項
 
-1. APIキーの安全な保管
-   - config.jsonをgitignore
-   - メモリ上での適切な管理
+1. **APIキー**: `config.json` は gitignore 済み。ログや例外メッセージに出さない
+   （`history.json` も翻訳した文章そのものが入るため gitignore 済み）
+2. **プロンプトインジェクション対策**: 上記「プロンプト設計上の約束」を維持する
+3. **エラーハンドリング**: API呼び出し失敗時はダイアログでユーザーに通知し、
+   アプリを落とさない
 
-2. 入力検証
-   - テキスト長制限
-   - 不正な入力の拒否
+## 今後の拡張候補
 
-3. プロンプトインジェクション対策
-   - システムプロンプトとユーザー入力の明確な分離
-   - 特殊な指示文の無効化
-   - 翻訳タスクの厳格な制限
-
-4. エラーハンドリング
-   - API呼び出し失敗時の適切な処理
-   - ユーザーへのフィードバック
-
-## 今後の拡張可能性
-
-- 翻訳履歴機能
-- お気に入り翻訳の保存
-- バッチ翻訳機能
-- カスタムプロンプト設定
-- より多くの言語対応
-- オフラインモード（ローカルモデル）
-- プラグインシステム
-
-## 完成基準
-
-- ✅ start.batで起動可能
-- ✅ 初回起動時に設定ダイアログが表示
-- ✅ 設定完了後に翻訳機能が有効化
-- ✅ 5言語間の翻訳が正常動作
-- ✅ 6種類のLLMモデルが選択可能（GPT-5.5、GPT-5.4-mini、Claude Sonnet 5、Claude Haiku 4.5、Gemini 3.1 Pro、Gemini 3.8 Flash）
-- ✅ 基本的なメモ帳機能（開く・保存）が動作
-- ✅ ウィンドウサイズが保存・復元される
-- ✅ 現在使用中のモデルが右ペインに表示される
-- ✅ 翻訳・校正のキャンセル機能が動作
-- ✅ プロンプトインジェクション対策が実装されている
-- ✅ Gemini 3の返答形式に対応している
-- ✅ エラーが適切にハンドリングされる
+お気に入り保存、バッチ翻訳、カスタムプロンプト、対応言語追加、
+ローカルモデル（オフライン）対応、履歴の検索・エクスポート。

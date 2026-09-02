@@ -7,25 +7,29 @@ import json
 import os
 from typing import Dict, Optional
 
+from src import models
+
 
 class ConfigManager:
     """設定ファイルの読み書きを管理するクラス"""
 
+    # 翻訳スタイルの一覧（唯一の定義場所）
+    # llm_service.TranslationService.STYLE_INSTRUCTIONS のキーと一致させること
+    TRANSLATION_STYLES = ["ビジネス", "標準", "友人"]
+
     DEFAULT_CONFIG = {
-        "model_type": "",  # "gpt", "claude", "gemini"
-        "api_keys": {
-            "openai": "",
-            "anthropic": "",
-            "google": ""
-        },
+        "model_type": "",  # models.MODELS のいずれかの model_type
+        # プロバイダーが増えても models.PROVIDERS を編集するだけでよい
+        "api_keys": {provider.key: "" for provider in models.PROVIDERS},
         "last_source_lang": "Japanese",
         "last_target_lang": "English",
         "auto_translate_enabled": False,  # 自動翻訳のON/OFF
-        "translation_style": "ビジネス",  # 翻訳スタイル: "ビジネス", "同僚", "友人"
+        "translation_style": "ビジネス",  # 翻訳スタイル: "ビジネス", "標準", "友人"
         "last_source_text": "",  # 最後に編集した翻訳元テキスト
         "last_target_text": "",   # 最後の翻訳結果
         "window_width": 1000,  # ウィンドウの幅
-        "window_height": 600   # ウィンドウの高さ
+        "window_height": 600,  # ウィンドウの高さ
+        "history_enabled": True  # 翻訳履歴の記録ON/OFF
     }
 
     def __init__(self, config_path: str = "config.json"):
@@ -48,24 +52,41 @@ class ConfigManager:
                 with open(self.config_path, 'r', encoding='utf-8') as f:
                     loaded_config = json.load(f)
                     # デフォルト設定とマージ（新しいキーが追加された場合に対応）
-                    config = self.DEFAULT_CONFIG.copy()
+                    config = self._default_config()
                     config.update(loaded_config)
                     # api_keysも個別にマージ
                     if "api_keys" in loaded_config:
-                        config["api_keys"].update(loaded_config["api_keys"])
+                        api_keys = self.DEFAULT_CONFIG["api_keys"].copy()
+                        api_keys.update(loaded_config["api_keys"])
+                        config["api_keys"] = api_keys
 
                     # 後方互換性：古いモデル名を新しいモデル名に自動変換
                     model_type = config.get("model_type", "")
-                    if model_type == "gpt4":
-                        config["model_type"] = "gpt"
-                        print("設定ファイルのモデル名を 'gpt4' から 'gpt' に自動変換しました")
+                    normalized = models.normalize_model_type(model_type)
+                    if normalized != model_type:
+                        config["model_type"] = normalized
+                        print(f"設定ファイルのモデル名を '{model_type}' から "
+                              f"'{normalized}' に自動変換しました")
 
                     return config
             except (json.JSONDecodeError, IOError) as e:
                 print(f"設定ファイルの読み込みに失敗しました: {e}")
-                return self.DEFAULT_CONFIG.copy()
+                return self._default_config()
         else:
-            return self.DEFAULT_CONFIG.copy()
+            return self._default_config()
+
+    @classmethod
+    def _default_config(cls) -> Dict:
+        """
+        デフォルト設定のコピーを生成
+
+        Returns:
+            DEFAULT_CONFIGのコピー（api_keysもコピーするため、
+            返り値を書き換えてもDEFAULT_CONFIGは汚染されない）
+        """
+        config = cls.DEFAULT_CONFIG.copy()
+        config["api_keys"] = cls.DEFAULT_CONFIG["api_keys"].copy()
+        return config
 
     def save(self) -> bool:
         """
@@ -93,17 +114,24 @@ class ConfigManager:
         if not model_type:
             return False
 
+        return self.get_api_key_for_model(model_type) is not None
+
+    def get_api_key_for_model(self, model_type: str) -> Optional[str]:
+        """
+        指定したモデルに対応するAPIキーを取得
+
+        Args:
+            model_type: モデル識別子
+
+        Returns:
+            APIキー、または設定されていない場合はNone
+        """
+        provider = models.get_provider_key(model_type)
+        if provider is None:
+            return None
+
         api_keys = self.config.get("api_keys", {})
-
-        # モデルに対応するAPIキーが設定されているかチェック
-        if model_type in ["gpt", "gpt-mini"]:
-            return bool(api_keys.get("openai", "").strip())
-        elif model_type in ["claude", "claude-haiku"]:
-            return bool(api_keys.get("anthropic", "").strip())
-        elif model_type in ["gemini", "gemini-flash"]:
-            return bool(api_keys.get("google", "").strip())
-
-        return False
+        return api_keys.get(provider, "").strip() or None
 
     def get_current_api_key(self) -> Optional[str]:
         """
@@ -112,26 +140,25 @@ class ConfigManager:
         Returns:
             APIキー、または設定されていない場合はNone
         """
-        model_type = self.config.get("model_type", "")
-        api_keys = self.config.get("api_keys", {})
+        return self.get_api_key_for_model(self.config.get("model_type", ""))
 
-        if model_type in ["gpt", "gpt-mini"]:
-            return api_keys.get("openai", "").strip() or None
-        elif model_type in ["claude", "claude-haiku"]:
-            return api_keys.get("anthropic", "").strip() or None
-        elif model_type in ["gemini", "gemini-flash"]:
-            return api_keys.get("google", "").strip() or None
+    def get_model_type(self) -> str:
+        """
+        現在選択されているモデル識別子を取得
 
-        return None
+        Returns:
+            モデル識別子（未設定の場合は空文字列）
+        """
+        return self.config.get("model_type", "")
 
     def set_model_type(self, model_type: str) -> None:
         """
         使用するLLMモデルを設定
 
         Args:
-            model_type: "gpt", "gpt-mini", "claude", "claude-haiku", "gemini", "gemini-flash"のいずれか
+            model_type: models.MODELS に定義されたモデル識別子
         """
-        if model_type in ["gpt", "gpt-mini", "claude", "claude-haiku", "gemini", "gemini-flash"]:
+        if models.is_valid_model_type(model_type):
             self.config["model_type"] = model_type
 
     def set_api_key(self, provider: str, api_key: str) -> None:
@@ -139,10 +166,10 @@ class ConfigManager:
         APIキーを設定
 
         Args:
-            provider: "openai", "anthropic", "google"のいずれか
+            provider: models.PROVIDERS に定義されたプロバイダーキー
             api_key: APIキー
         """
-        if provider in ["openai", "anthropic", "google"]:
+        if provider in models.PROVIDER_MAP:
             self.config["api_keys"][provider] = api_key
 
     def get_last_languages(self) -> tuple:
@@ -186,23 +213,46 @@ class ConfigManager:
         """
         self.config["auto_translate_enabled"] = enabled
 
+    def is_history_enabled(self) -> bool:
+        """
+        翻訳履歴の記録が有効かどうかを取得
+
+        Returns:
+            履歴記録の有効/無効
+        """
+        return self.config.get("history_enabled", True)
+
+    def set_history_enabled(self, enabled: bool) -> None:
+        """
+        翻訳履歴の記録の有効/無効を設定
+
+        Args:
+            enabled: 有効/無効
+        """
+        self.config["history_enabled"] = enabled
+
     def get_translation_style(self) -> str:
         """
         翻訳スタイルを取得
 
         Returns:
-            翻訳スタイル（"ビジネス", "同僚", "友人"）
+            翻訳スタイル（TRANSLATION_STYLES のいずれか）
+            設定ファイルに未知の値が入っていた場合は既定値を返す
+            （呼び出し側は readonly の Combobox にそのまま流すため）
         """
-        return self.config.get("translation_style", "ビジネス")
+        style = self.config.get("translation_style", "ビジネス")
+        if style not in self.TRANSLATION_STYLES:
+            return "ビジネス"
+        return style
 
     def set_translation_style(self, style: str) -> None:
         """
         翻訳スタイルを設定
 
         Args:
-            style: "ビジネス", "同僚", "友人"のいずれか
+            style: TRANSLATION_STYLES のいずれか
         """
-        if style in ["ビジネス", "同僚", "友人"]:
+        if style in self.TRANSLATION_STYLES:
             self.config["translation_style"] = style
 
     def get_last_texts(self) -> tuple:

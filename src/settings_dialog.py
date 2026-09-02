@@ -1,15 +1,26 @@
 """
-設定ダイアログUIモジュール
-LLMモデルとAPIキーの設定を管理
+API設定ダイアログUIモジュール
+各プロバイダーのAPIキーのみを管理する
+
+モデルの選択はメニューバーの「モデル」メニューで行うため、
+このダイアログはAPIキーの入力に専念する。
 """
 
 import tkinter as tk
 from tkinter import ttk, messagebox
 from src.config_manager import ConfigManager
+from src import models
 
 
 class SettingsDialog:
-    """設定ダイアログクラス"""
+    """API設定ダイアログクラス"""
+
+    # ダイアログの幅
+    DIALOG_WIDTH = 500
+    # APIキー欄以外の要素（タイトル・説明・ボタン）に必要な高さ
+    BASE_HEIGHT = 200
+    # プロバイダー1件あたりのAPIキー入力欄の高さ
+    PROVIDER_ROW_HEIGHT = 62
 
     def __init__(self, parent, config_manager: ConfigManager):
         """
@@ -24,7 +35,9 @@ class SettingsDialog:
         # ダイアログウィンドウの作成
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("API設定")
-        self.dialog.geometry("500x650")
+        # プロバイダー数に応じて高さを自動調整
+        height = self.BASE_HEIGHT + self.PROVIDER_ROW_HEIGHT * len(models.PROVIDERS)
+        self.dialog.geometry(f"{self.DIALOG_WIDTH}x{height}")
         self.dialog.resizable(False, False)
         self.dialog.transient(parent)
         self.dialog.grab_set()
@@ -59,96 +72,39 @@ class SettingsDialog:
         # タイトル
         title_label = ttk.Label(
             main_frame,
-            text="LLMモデルとAPIキーの設定",
+            text="APIキーの設定",
             font=('Arial', 14, 'bold')
         )
-        title_label.pack(pady=(0, 20))
+        title_label.pack(pady=(0, 5))
 
-        # モデル選択フレーム
-        model_frame = ttk.LabelFrame(main_frame, text="LLMモデル", padding="10")
-        model_frame.pack(fill=tk.X, pady=(0, 20))
-
-        self.model_var = tk.StringVar()
-        models = [
-            ("GPT-5.6 Terra (OpenAI)", "gpt"),
-            ("GPT-5.6 Luna (OpenAI)", "gpt-mini"),
-            ("Claude Sonnet 5 (Anthropic)", "claude"),
-            ("Claude Haiku 4.5 (Anthropic)", "claude-haiku"),
-            ("Gemini 3.1 Pro (Google)", "gemini"),
-            ("Gemini 3.8 Flash (Google)", "gemini-flash")
-        ]
-
-        for text, value in models:
-            rb = ttk.Radiobutton(
-                model_frame,
-                text=text,
-                variable=self.model_var,
-                value=value,
-                command=self._on_model_change
-            )
-            rb.pack(anchor=tk.W, pady=2)
+        # 説明
+        ttk.Label(
+            main_frame,
+            text="使用するプロバイダーのAPIキーを入力してください。\n"
+                 "モデルの切り替えは「モデル」メニューから行えます。",
+            justify=tk.LEFT,
+            foreground="#555555"
+        ).pack(anchor=tk.W, pady=(0, 15))
 
         # APIキーフレーム
         api_frame = ttk.LabelFrame(main_frame, text="APIキー", padding="10")
-        api_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 20))
+        api_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 15))
 
-        # OpenAI APIキー
-        self.openai_frame = ttk.Frame(api_frame)
-        ttk.Label(self.openai_frame, text="OpenAI API Key:").pack(anchor=tk.W)
-        openai_entry_frame = ttk.Frame(self.openai_frame)
-        openai_entry_frame.pack(fill=tk.X, pady=(5, 10))
-        self.openai_entry = ttk.Entry(openai_entry_frame, show="*", width=40)
-        self.openai_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        self.openai_show_btn = ttk.Button(
-            openai_entry_frame,
-            text="表示",
-            width=6,
-            command=lambda: self._toggle_password(self.openai_entry, self.openai_show_btn)
-        )
-        self.openai_show_btn.pack(side=tk.LEFT, padx=(5, 0))
+        # models.PROVIDERS からAPIキー入力欄を生成（全プロバイダーを常時表示）
+        self.api_key_entries = {}
+        for provider in models.PROVIDERS:
+            ttk.Label(api_frame, text=provider.api_key_label).pack(anchor=tk.W)
+            entry_frame = ttk.Frame(api_frame)
+            entry_frame.pack(fill=tk.X, pady=(5, 10))
+            entry = ttk.Entry(entry_frame, show="*", width=40)
+            entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+            show_btn = ttk.Button(entry_frame, text="表示", width=6)
+            show_btn.config(
+                command=lambda e=entry, b=show_btn: self._toggle_password(e, b)
+            )
+            show_btn.pack(side=tk.LEFT, padx=(5, 0))
 
-        # Anthropic APIキー
-        self.anthropic_frame = ttk.Frame(api_frame)
-        ttk.Label(self.anthropic_frame, text="Anthropic API Key:").pack(anchor=tk.W)
-        anthropic_entry_frame = ttk.Frame(self.anthropic_frame)
-        anthropic_entry_frame.pack(fill=tk.X, pady=(5, 10))
-        self.anthropic_entry = ttk.Entry(anthropic_entry_frame, show="*", width=40)
-        self.anthropic_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        self.anthropic_show_btn = ttk.Button(
-            anthropic_entry_frame,
-            text="表示",
-            width=6,
-            command=lambda: self._toggle_password(self.anthropic_entry, self.anthropic_show_btn)
-        )
-        self.anthropic_show_btn.pack(side=tk.LEFT, padx=(5, 0))
-
-        # Google APIキー
-        self.google_frame = ttk.Frame(api_frame)
-        ttk.Label(self.google_frame, text="Google API Key:").pack(anchor=tk.W)
-        google_entry_frame = ttk.Frame(self.google_frame)
-        google_entry_frame.pack(fill=tk.X, pady=(5, 10))
-        self.google_entry = ttk.Entry(google_entry_frame, show="*", width=40)
-        self.google_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        self.google_show_btn = ttk.Button(
-            google_entry_frame,
-            text="表示",
-            width=6,
-            command=lambda: self._toggle_password(self.google_entry, self.google_show_btn)
-        )
-        self.google_show_btn.pack(side=tk.LEFT, padx=(5, 0))
-
-        # オプションフレーム
-        option_frame = ttk.LabelFrame(main_frame, text="オプション", padding="10")
-        option_frame.pack(fill=tk.X, pady=(0, 20))
-
-        # 自動翻訳ON/OFF
-        self.auto_translate_var = tk.BooleanVar()
-        auto_translate_cb = ttk.Checkbutton(
-            option_frame,
-            text="自動翻訳を有効にする（編集後2秒で自動的に翻訳）",
-            variable=self.auto_translate_var
-        )
-        auto_translate_cb.pack(anchor=tk.W)
+            self.api_key_entries[provider.key] = entry
 
         # ボタンフレーム
         button_frame = ttk.Frame(main_frame)
@@ -177,78 +133,60 @@ class SettingsDialog:
             entry.config(show='*')
             button.config(text='表示')
 
-    def _on_model_change(self):
-        """モデル選択変更時の処理"""
-        model = self.model_var.get()
-
-        # すべてのフレームを非表示
-        self.openai_frame.pack_forget()
-        self.anthropic_frame.pack_forget()
-        self.google_frame.pack_forget()
-
-        # 選択されたモデルに対応するフレームを表示
-        if model in ["gpt", "gpt-mini"]:
-            self.openai_frame.pack(fill=tk.X)
-        elif model in ["claude", "claude-haiku"]:
-            self.anthropic_frame.pack(fill=tk.X)
-        elif model in ["gemini", "gemini-flash"]:
-            self.google_frame.pack(fill=tk.X)
-
     def _load_current_settings(self):
         """現在の設定を読み込み"""
-        config = self.config_manager.config
-
-        # モデルタイプを設定
-        model_type = config.get("model_type", "")
-        if model_type:
-            self.model_var.set(model_type)
-            self._on_model_change()
-
-        # APIキーを設定
-        api_keys = config.get("api_keys", {})
-        self.openai_entry.insert(0, api_keys.get("openai", ""))
-        self.anthropic_entry.insert(0, api_keys.get("anthropic", ""))
-        self.google_entry.insert(0, api_keys.get("google", ""))
-
-        # 自動翻訳設定を読み込み
-        self.auto_translate_var.set(self.config_manager.is_auto_translate_enabled())
+        api_keys = self.config_manager.config.get("api_keys", {})
+        for provider_key, entry in self.api_key_entries.items():
+            entry.insert(0, api_keys.get(provider_key, ""))
 
     def _on_save(self):
         """保存ボタンクリック時の処理"""
-        model = self.model_var.get()
-
-        if not model:
-            messagebox.showerror("エラー", "LLMモデルを選択してください。")
-            return
-
         # APIキーを取得
-        openai_key = self.openai_entry.get().strip()
-        anthropic_key = self.anthropic_entry.get().strip()
-        google_key = self.google_entry.get().strip()
+        api_keys = {
+            provider_key: entry.get().strip()
+            for provider_key, entry in self.api_key_entries.items()
+        }
 
-        # 選択されたモデルに対応するAPIキーが入力されているか確認
-        if model in ["gpt", "gpt-mini"] and not openai_key:
-            messagebox.showerror("エラー", "OpenAI API Keyを入力してください。")
-            return
-        elif model in ["claude", "claude-haiku"] and not anthropic_key:
-            messagebox.showerror("エラー", "Anthropic API Keyを入力してください。")
-            return
-        elif model in ["gemini", "gemini-flash"] and not google_key:
-            messagebox.showerror("エラー", "Google API Keyを入力してください。")
+        # 最低1つはAPIキーが必要
+        if not any(api_keys.values()):
+            messagebox.showerror(
+                "エラー",
+                "APIキーを少なくとも1つ入力してください。"
+            )
             return
 
         # 設定を保存
-        self.config_manager.set_model_type(model)
-        self.config_manager.set_api_key("openai", openai_key)
-        self.config_manager.set_api_key("anthropic", anthropic_key)
-        self.config_manager.set_api_key("google", google_key)
-        self.config_manager.set_auto_translate_enabled(self.auto_translate_var.get())
+        for key, value in api_keys.items():
+            self.config_manager.set_api_key(key, value)
+
+        # モデル未選択、または選択中モデルのAPIキーが失われた場合は
+        # 使用可能なモデルを自動選択する（初回起動時もこの経路で設定が完了する）
+        if not self.config_manager.get_current_api_key():
+            fallback = self._find_available_model(api_keys)
+            if fallback:
+                self.config_manager.set_model_type(fallback)
 
         if self.config_manager.save():
             self.result = True
             self.dialog.destroy()
         else:
             messagebox.showerror("エラー", "設定の保存に失敗しました。")
+
+    @staticmethod
+    def _find_available_model(api_keys: dict) -> str:
+        """
+        APIキーが入力済みのプロバイダーのうち、最初に使えるモデルを返す
+
+        Args:
+            api_keys: プロバイダーキー → APIキーの辞書
+
+        Returns:
+            モデル識別子。該当がない場合は空文字列
+        """
+        for model in models.MODELS:
+            if api_keys.get(model.provider):
+                return model.model_type
+        return ""
 
     def _on_cancel(self):
         """キャンセルボタンクリック時の処理"""

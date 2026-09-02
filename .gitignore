@@ -208,3 +208,5 @@ __marimo__/
 
 # DeepYami翻訳アプリ
 config.json
+# 翻訳履歴（翻訳した文章そのものが入るため追跡しない）
+history.json
