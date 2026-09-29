@@ -7,8 +7,8 @@ LangChainと複数のLLMモデルを使用した、DeepL風の翻訳アプリケ
 - 🌐 **多言語対応**（日本語、中国語簡体字、中国語繁体字、韓国語、英語）
   - 翻訳元の言語は自動検出されるため、指定するのは翻訳先だけ
 - 🤖 **複数のLLMモデルに対応**
-  - OpenAI: GPT-5.6 Sol / GPT-5.6 Terra / GPT-5.6 Luna
-  - Anthropic: Claude Opus 5 / Claude Sonnet 5 / Claude Haiku 4.5
+  - OpenAI: GPT-6.1 Sol / GPT-5.6 Terra / GPT-6 Luna
+  - Anthropic: Claude Opus 5.5 / Claude Sonnet 5.5 / Claude Haiku 4.5
   - Google: Gemini 3.1 Pro / Gemini 3.8 Flash / Gemini 3.5 Flash Lite
   - メニューバーの「モデル」からいつでも切替可能（選択は自動保存）
   - APIキーの設定は「設定」→「API設定...」から
