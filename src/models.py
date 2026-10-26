@@ -65,8 +65,8 @@ PROVIDER_MAP: Dict[str, ProviderSpec] = {p.key: p for p in PROVIDERS}
 MODELS: List[ModelSpec] = [
     ModelSpec("gpt-sol", "GPT-6.1 Sol", "openai",
               "gpt-6.1-sol", {"reasoning_effort": "low"}),
-    ModelSpec("gpt", "GPT-5.6 Terra", "openai",
-              "gpt-5.6-terra", {"reasoning_effort": "none"}),
+    ModelSpec("gpt", "GPT-6.1 Terra", "openai",
+              "gpt-6.1-terra", {"reasoning_effort": "none"}),
     ModelSpec("gpt-mini", "GPT-6 Luna", "openai",
               "gpt-6-luna", {"reasoning_effort": "low"}),
     ModelSpec("claude-opus", "Claude Opus 5.5", "anthropic",
