@@ -63,8 +63,8 @@ PROVIDER_MAP: Dict[str, ProviderSpec] = {p.key: p for p in PROVIDERS}
 
 # モデル定義（UI上はこの順で並ぶ。上位モデルを先に記載する）
 MODELS: List[ModelSpec] = [
-    ModelSpec("gpt-sol", "GPT-6.1 Sol", "openai",
-              "gpt-6.1-sol", {"reasoning_effort": "low"}),
+    ModelSpec("gpt-sol", "GPT-6.2 Sol", "openai",
+              "gpt-6.2-sol", {"reasoning_effort": "low"}),
     ModelSpec("gpt", "GPT-6.1 Terra", "openai",
               "gpt-6.1-terra", {"reasoning_effort": "none"}),
     ModelSpec("gpt-mini", "GPT-6 Luna", "openai",
