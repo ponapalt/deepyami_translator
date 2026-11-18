@@ -9,7 +9,7 @@ LangChainと複数のLLMモデルを使用した、DeepL風の翻訳アプリケ
 - 🤖 **複数のLLMモデルに対応**
   - OpenAI: GPT-6.2 Sol / GPT-6.1 Terra / GPT-6 Luna
   - Anthropic: Claude Opus 5.5 / Claude Sonnet 5.5 / Claude Haiku 5.5
-  - Google: Gemini 4 Carbon / Gemini 4 Hydrogen / Gemini 3.5 Flash Lite
+  - Google: Gemini 4 Carbon / Gemini 4 Neon / Gemini 4 Hydrogen
   - メニューバーの「モデル」からいつでも切替可能（選択は自動保存）
   - APIキーの設定は「設定」→「API設定...」から
 - 🎨 **翻訳スタイル選択**

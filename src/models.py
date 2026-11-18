@@ -77,10 +77,10 @@ MODELS: List[ModelSpec] = [
               "claude-haiku-5-5", {}),
     ModelSpec("gemini", "Gemini 4 Carbon", "google",
               "gemini-4-carbon", {"thinking_level": "low"}),
-    ModelSpec("gemini-flash", "Gemini 4 Hydrogen", "google",
+    ModelSpec("gemini-flash", "Gemini 4 Neon", "google",
+              "gemini-4-neon", {"thinking_level": "low"}),
+    ModelSpec("gemini-flash-lite", "Gemini 4 Hydrogen", "google",
               "gemini-4-hydrogen", {"thinking_level": "low"}),
-    ModelSpec("gemini-flash-lite", "Gemini 3.5 Flash Lite", "google",
-              "gemini-3.5-flash-lite", {"thinking_level": "low"}),
 ]
 
 MODEL_MAP: Dict[str, ModelSpec] = {m.model_type: m for m in MODELS}
